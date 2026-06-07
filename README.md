@@ -36,7 +36,7 @@ To add drag and drop support to your window:
 
 ### A simple example
 
-This program will accept filenames dropped onto the Input element. When dropped, the input element is updated to the filename or list of filenames.
+The sample program [file_drop_example.py](https://github.com/PySimpleGUI/psgdnd/blob/main/file_drop_example.py) will accept filenames dropped onto the Input element. When dropped, the input element is updated to the filename or list of filenames.
 
 ```python
 import psgdnd as dnd
