@@ -1,2 +1,2 @@
-PySimpleGUI>=5
-pyfiglet
+PySimpleGUI
+tkinterdnd2
