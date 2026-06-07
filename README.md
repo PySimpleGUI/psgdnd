@@ -5,12 +5,12 @@
   <h2 align="center">Drag and Drop for PySimpleGUI</h2>
 </p>
 
-
+<p align="center"><img width="850" height="429" src="psgdnd_screenshot.gif"><p>
 
 
 ## Description
 
-The long wait for drag-and-drop in the Tkinter port of PySimpleGUI might soon be over.  `psgdnd` is a prototype release for using `tkinterdnd2` to provide drag and drop functionality.  In theory, this will work with all existing versions of PySimpleGUI.
+Finally drag and drop!  The long wait for drag-and-drop in the Tkinter port of PySimpleGUI might soon be over.  `psgdnd` is a prototype release for using `tkinterdnd2` to provide drag and drop functionality.  In theory, this will work with all existing versions of PySimpleGUI.
 
 `psgdnd` integrates `tkinterdnd2` with `PySimpleGUI` and provides interfaces that are easy to use in a PySimpleGUI application.
 
