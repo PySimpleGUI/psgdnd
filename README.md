@@ -34,9 +34,11 @@ To add drag and drop support to your window:
 2. Register which elements you want to accept drop events and the type drops to accept
 3. Add processing of Drop Events to your event loop
 
-### A simple example
+### Demo Programs
 
-The sample program [file_drop_example.py](https://github.com/PySimpleGUI/psgdnd/blob/main/file_drop_example.py) will accept filenames dropped onto the Input element. When dropped, the input element is updated to the filename or list of filenames.
+There are a couple Demo Programs located in the folder Demo Programs.  One is a very simple example that's shown below. The other is a desktop icon that can be dropped onto.
+
+This simple example will accept filenames dropped onto the Input element. When dropped, the input element is updated to the filename or list of filenames.
 
 ```python
 import psgdnd as dnd
