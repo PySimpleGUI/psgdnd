@@ -3,8 +3,16 @@ from tkinterdnd2 import TkinterDnD, DND_FILES, DND_TEXT, DND_ALL, CF_UNICODETEXT
 import re
 
 
-version = '6.0'
+version = '6.0.1'
 __version__ = version.split()[0]
+
+"""
+Changelog 
+
+6.0         7-Jun-2026 Initial release
+6.0.1       8-Jun-2026 Added docstrings
+"""
+
 
 class DropEvent(object):
     def __init__(self, window, key, element, drop_type):
@@ -35,14 +43,32 @@ DROP_TYPE_UNKNOWN = 'UNKNOWN'
 """
 
 
+def is_drop_event(event):
+    """
+    Returns True if the passed in event is a drop event.  A drop event is always a DropEvent object
 
-#     ______   ______  _____   _____
-#     |     \ |_____/ |     | |_____]
-#     |_____/ |    \_ |_____| |
-#
-#          HELPER FUNCTIONS
+    :param event:               Event to check
+    :type event:                (Any)
+    :return:                    Trye if the event is a drop event
+    :rtype:                     (bool)
+    """
+
+    return isinstance(event, DropEvent)
+
 
 def register_element_dnd(element: sg.Element, window: sg.Window, drop_type=DROP_TYPE_ALL):
+    """
+    Register a window element to accept Drag and Drop.
+    Pass in your elmenent object, the window that contains it, the type of drops it can receive.
+    Valid drop types: DROP_TYPE_TEXT, DROP_TYPE_FILES, DROP_TYPE_ALL
+
+    :param element:            Element to register
+    :type element:             (sg.Element)
+    :param window:             Window that contains the element
+    :type window:              (sg.Window)
+    :param drop_type:          Type of drops it should accept. DROP_TYPE_TEXT, DROP_TYPE_FILES, DROP_TYPE_ALL
+    :type drop_type:           (str)
+    """
     TkinterDnD._require(window.TKroot)
 
     if drop_type == DROP_TYPE_TEXT:
@@ -55,13 +81,23 @@ def register_element_dnd(element: sg.Element, window: sg.Window, drop_type=DROP_
         print(f'ERROR Bad drop type in register_element_dnd.  {drop_type=}')
         return
 
-    # When get drop event, send an event through the window.read call in the event loop
-    # Format of event is a tuple.  event = ('+DROP+', key of element dropped on).  In values dict key = filename that was dropped as a string
-    # element.widget.dnd_bind("<<Drop>>", lambda event, element=element, window=window : window.write_event_value(('+DROP+', element.key), reformat_filenames(event.data)))
+    # Bind drop event to the widget.  Set callback function on_drop
     element.widget.dnd_bind("<<Drop>>", lambda event, element=element, window=window: on_drop(event, element, window))
 
 
 def on_drop(event, element: sg.Element, window: sg.Window):
+    """
+    The function that is called when a drop happens.  This function reformats and puts the data
+    into a DropEvent object and sends it to the window's event queue.
+
+    :param event:           Data about the drop event
+    :type event:            (tkinterdnd2.TkinterDnD.DnDEvent)
+    :param element:         Element that received the drop
+    :type element:          (sg.Element)
+    :param window:          Window that contains the element
+    :type window:           (sg.Window)
+    """
+
     # When drop event happens, send event to event loop.
     # Event generated will be a DropEvent object
     # print(f'{event.type=}')
@@ -70,7 +106,7 @@ def on_drop(event, element: sg.Element, window: sg.Window):
         value_data = event.data
     elif event.type == CF_HDROP:
         drop_type = DROP_TYPE_FILES
-        value_data = reformat_filenames(event.data)
+        value_data = _reformat_filenames(event.data)
     else:
         drop_type = DROP_TYPE_UNKNOWN
         value_data = event.data
@@ -79,7 +115,17 @@ def on_drop(event, element: sg.Element, window: sg.Window):
     window.write_event_value(drop_event, value_data)                                                   # Send the DropEvent object as event to the window
 
 
-def reformat_filenames(filenames: str) -> str:
+def _reformat_filenames(filenames: str) -> str:
+    """
+    Reformats the string of filesname provided by tkinterdnd2 into a string with filenames
+    separated by commas.
+
+    :param filenames:           Filenames string to convert
+    :type filenames:            (str)
+    :return:                    The converted string
+    :rtype:                     (str)
+    """
+
     # reformat the string of filenames so that each filename is separated with a ","
     # input string has filenames separated with a space AND if a filename contains spaces it is surrounded by { }
     # I'm not good at Regex and asked for help from a CheatBot
@@ -87,8 +133,6 @@ def reformat_filenames(filenames: str) -> str:
     return ','.join(a or b for a, b in files)
 
 
-def is_drop_event(event):
-    return isinstance(event, DropEvent)
 
 # just in case module is called
 def main():
