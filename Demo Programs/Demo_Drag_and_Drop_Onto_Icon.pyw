@@ -58,7 +58,7 @@ __version__ = version.split()[0]
 Changelog since last major release
 
 6.0     9-Jun-2026      Initial release
-6.1     14-Jun-2026     Addition of mini windows, error checking, 
+6.1     14-Jun-2026     Addition of mini windows, made googletrans an optional package,  error checking, bug fixes
 """
 
 
@@ -314,7 +314,7 @@ def wrap_in_border(title: str, layout_rows: list, close_key: Any = 'Exit') -> li
     layout = [[sg.Column([titlebar], expand_x=True, pad=(0, 0))],
               [sg.HorizontalSeparator(color=sg.theme_text_color(),  pad=(0, 0))],
               *layout_rows]
-    return [[sg.Frame("", layout, border_color=sg.theme_text_color(), border_width_no_relief=1, p=0, expand_x=True, expand_y=True)]]
+    return [[sg.Frame("", layout, border_width_no_relief=1, p=0, expand_x=True, expand_y=True)]]
 
 
 def MiniWindow(title: str, layout: List, **kwargs) -> sg.Window:
@@ -332,7 +332,7 @@ def MiniWindow(title: str, layout: List, **kwargs) -> sg.Window:
     # first embed the supplied layout into a layout that has a fake titlebar and frame used to draw the border
     layout = wrap_in_border(title, layout)
     return sg.Window(title, layout, no_titlebar=True, grab_anywhere=True, keep_on_top=True,
-                    finalize=True, background_color=sg.theme_button_color_background(),
+                    finalize=True,
                     margins=(0, 0), alpha_channel=0.96, **kwargs)
 
 
