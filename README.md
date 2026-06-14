@@ -38,6 +38,7 @@ To add drag and drop support to your window:
 
 There are a couple Demo Programs located in the folder Demo Programs.  One is a very simple example that's shown below. The other is a desktop icon that can be dropped onto.
 
+#### Simple File Drop
 This simple example will accept filenames dropped onto the Input element. When dropped, the input element is updated to the filename or list of filenames.
 
 ```python
@@ -95,6 +96,14 @@ def main():
 if __name__ == '__main__':
     main()
 ```
+
+#### Drop Onto Icon
+
+`Demo_Drag_and_Drop_Onto_Icon.pyw` is a Drag and Drop program I've wanted to create using PySimpleGUI for a long time. It wasn't possible until `psgdnd` was released this month.  It has operations I frequently use such as image format conversions and translating to/from English and Spanish.
+
+
+https://github.com/user-attachments/assets/6919a166-2014-469b-8b4a-651413a8a12e
+
 
 
 
