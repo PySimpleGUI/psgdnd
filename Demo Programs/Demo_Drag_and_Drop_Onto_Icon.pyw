@@ -1,18 +1,24 @@
 import base64
 import io
 import os
-import random
 import webbrowser
-from typing import Tuple, Union
+from typing import Tuple, Union, List, Any
 from PIL import Image
 import PySimpleGUI as sg
 import psgdnd as dnd
 from pathlib import Path
-from googletrans import Translator
+try:
+    from googletrans import Translator
+    translate_installed = True
+except:
+    print('*** WARNING - unable to import from the googletrans package. You will not be able to access Translation features. ***')
+    translate_installed = False
 
 """
 
 Creates what appears to be an icon on your desktop, but is in reality a PySimpleGUI program.
+
+NOTE - You need to use  PySimpleGUI version 6.2 with this program.  6.2 has the ability to set any color of border for Frame elements
 
 Ways to interface with the icon include:
 * Right click menu
@@ -34,6 +40,7 @@ Features:
     - Translate text into English and put on clipboard
     - Translate text into Spanish and put on clipboard
 * Toggle keep on top using right click menu
+* Shows various dialog using a mini-window that's designed into this application
 
 Requires:
     PIL for image format conversion
@@ -44,15 +51,14 @@ Copyright 2026 PySimpleGUI. All rights reserved.
 """
 
 
-version = '6.0.1'
+version = '6.1'
 __version__ = version.split()[0]
-
 
 """
 Changelog since last major release
 
 6.0     9-Jun-2026      Initial release
-6.0.1   13-Jun-2026     Added image type converstion, English/Spanash translate
+6.1     14-Jun-2026     Addition of mini windows, error checking, 
 """
 
 
@@ -67,12 +73,14 @@ Y8ooooo. 88ooood8   88     88   88 88'  `88 88'  `88 Y8ooooo.
                                                  .88          
                                              d8888P
 """
-
+# ---------- CONSTANTS ----------
 KEY_REMOVABLE_FOLDER = '-REMOVABLE FOLDER-'
 KEY_JPG_QUALITY = '-JPG QUALITY-'
 KEY_ALPHA = '-ALPHA-'
 KEY_PNG_ICON_FILENAME= '-ICON-'
 KEY_PNG_ICON_BASE64 = '-ICON-BASE64-'
+
+DEFAULT_JPG_QUALITY = 95
 
 def show_settings_window(location:Tuple[int, int]):
     """
@@ -89,13 +97,13 @@ def show_settings_window(location:Tuple[int, int]):
               [sg.Input(setting='', justification='r', s=40, k=KEY_PNG_ICON_BASE64), sg.T('Icon Base64')],
               [sg.Push(), sg.OK(), sg.Cancel()]]
 
-    window = sg.Window('Settings', layout, location=location, keep_on_top=True, no_titlebar=True, finalize=True)
+    window = MiniWindow('Settings', layout, location=location)
     window.settings_restore()
     window.refresh()
     window.move(location[0]-window.size[0]-10, location[1]-window.size[1])
     while True:
         event, values = window.read()
-        if event in (sg.WIN_CLOSED, 'Cancel'):
+        if event in (sg.WIN_CLOSED, 'Cancel', 'Exit'):
             break
         elif event == 'OK':
             if values[KEY_PNG_ICON_BASE64].startswith(("b'", 'b"')):        # if the bytestring included quotes, strip off the quotes
@@ -144,7 +152,10 @@ def convert_formats(input_file:str, encode_format:str='PNG') -> bool:
     if encode_format.lower() in ('jpeg', 'jpg'):
         image = image.convert("RGB")
         encode_format = 'jpg'
-        jpg_quality = int(sg.user_settings_get_entry(KEY_JPG_QUALITY, 0))
+        try:
+            jpg_quality = int(sg.user_settings_get_entry(KEY_JPG_QUALITY, DEFAULT_JPG_QUALITY))
+        except:
+            jpg_quality = DEFAULT_JPG_QUALITY
     path = Path(input_file)
     output_file = path.with_name(path.stem).with_suffix('.'+encode_format.lower())
     # print(f'{output_file=}')
@@ -218,7 +229,7 @@ def image_popup(filenames:str, location):
         layout = [[sg.Text('Images dropped - What do you want to do with them?')],
                   [sg.Text('\n'.join(file_list))],
                   [[sg.Button(action, s=button_size)] for action in actions],]
-        convert_window = sg.Window('Image actions', layout, location=location, keep_on_top=True, no_titlebar=True, finalize=True)
+        convert_window = MiniWindow('Image actions', layout, location=location)
         convert_window.refresh()
         convert_window.move(location[0] - convert_window.size[0], location[1] - convert_window.size[1])
         event, values = convert_window.read(close=True)
@@ -232,6 +243,15 @@ def image_popup(filenames:str, location):
                 else:
                     convert_formats(file, image_format)
                     display_message(f'Converted {file} to {image_format}')
+    else:
+        layout = [[sg.Text('Files dropped:', font='_ 15', p=(10,0))]]
+        for file in file_list:
+            layout.append([sg.Text(file, p=(10,0))])
+        layout.append([sg.Push(), sg.Ok()])
+        window = MiniWindow('Files Dropped', layout, location=location)
+        window.refresh()
+        window.move(location[0] - window.size[0], location[1] - window.size[1])
+        event, values = window.read(close=True)
 
         # sg.popup(f'Dropped files:', '\n'.join(file_list), non_blocking=True, line_width=max(len(f)+1 for f in file_list), location=location, no_titlebar=True)
 
@@ -241,16 +261,16 @@ def text_popup(text:str, location):
 
       :param text:              The text dropped onto the icon
       :type text:               str
-      :param location:          The (x, y) coordinates of the icon window
+      :param location:          The (x, y) coordinates of the icon window.  Will want to show the popup offset from this location
       :type location:           Tuple[int, int] | Tuple[None, None]
     """
     actions = ('Translate to English', 'Translate to Spanish',  'Cancel')
     lang_to_dest = {'Spanish' : 'es', 'English' : 'en'}
     button_size = max(len(a) for a in actions)
     layout = [[sg.Text('Text dropped - What do you want to do with it?')],
-              [sg.Text()],
+              [sg.Text('' if translate_installed else '* NOTE * Unable to use translate features. You need to install googletrans: pip install googletrans==3.1.0a0')],
               [[sg.Button(action, s=button_size)] for action in actions],]
-    convert_window = sg.Window('Text actions', layout, location=location, keep_on_top=True, no_titlebar=True, finalize=True)
+    convert_window = MiniWindow('Text actions', layout, location=location)
     convert_window.refresh()
     convert_window.move(location[0] - convert_window.size[0], location[1] - convert_window.size[1])
     event, values = convert_window.read(close=True)
@@ -258,24 +278,74 @@ def text_popup(text:str, location):
     if event.startswith('Translate'):
         lang = event.split()[-1]                # The image format is always at the end of the button string
         # Translate the text; dest='es' specifies Spanish as the destination language
-        translator = Translator()
+        if translate_installed:
+            translator = Translator()
 
-        translation = translator.translate(text, dest=lang_to_dest[lang])
-        display_message(f'Translated to {lang}')
-        sg.clipboard_set(translation.text)
+            translation = translator.translate(text, dest=lang_to_dest[lang])
+            display_message(f'Translated to {lang}')
+            sg.clipboard_set(translation.text)
 
         # sg.popup(f'Dropped files:', '\n'.join(file_list), non_blocking=True, line_width=max(len(f)+1 for f in file_list), location=location, no_titlebar=True)
 
+
+def wrap_in_border(title: str, layout_rows: list, close_key: Any = 'Exit') -> list:
+    """
+      Wraps a Window Layout with a mini window outline with a titlebar and close button
+
+        ┌──────────────────────────┐
+        │ ▌  Title              ✕  │
+        ├──────────────────────────┤
+        │   ...layout_rows...      │
+        └──────────────────────────┘
+    :param title:               Title for the window titlebar
+    :type title:                str
+    :param layout_rows:         The layout for the window
+    :type layout_rows:          List[List[sg.Element]]
+    :param close_key:           Key to use for the window close button
+    :type close_key:            Any
+    :return:                    A layout to put into an sg.Window
+    :rtype:                     List[List[sg.Element]]
+    """
+
+    titlebar = [sg.Text("▌", text_color=sg.theme_button_color_background(), font=("Segoe UI", 14)),
+                sg.Text(title, font=("Segoe UI", 10, "bold"), expand_x=True),
+                sg.Button("✕", key=close_key, border_width=0,  font=("Segoe UI", 11, "bold"), mouseover_colors=("#ffffff", "#a13544"), tooltip="Close")]
+
+    layout = [[sg.Column([titlebar], expand_x=True, pad=(0, 0))],
+              [sg.HorizontalSeparator(color=sg.theme_text_color(),  pad=(0, 0))],
+              *layout_rows]
+    return [[sg.Frame("", layout, border_color=sg.theme_text_color(), border_width_no_relief=1, p=0, expand_x=True, expand_y=True)]]
+
+
+def MiniWindow(title: str, layout: List, **kwargs) -> sg.Window:
+    """
+    A function that returns a Window object. The snake case MiniWindow name means we're acting like an object. An object is returned so the use won't notice
+    :param title:       Title for the window titlebar
+    :type title:        str
+    :param layout:      The window layout
+    :type layout:       List[List[sg.Element]]
+    :param kwargs:      The normal Window arguments that a user is using to create the window
+    :type kwargs:       dict
+    :return:            A Window object that's a mini window with no titlebar
+    :rtype:             sg.Window
+    """
+    # first embed the supplied layout into a layout that has a fake titlebar and frame used to draw the border
+    layout = wrap_in_border(title, layout)
+    return sg.Window(title, layout, no_titlebar=True, grab_anywhere=True, keep_on_top=True,
+                    finalize=True, background_color=sg.theme_button_color_background(),
+                    margins=(0, 0), alpha_channel=0.96, **kwargs)
+
+
+
+
 def display_message(message='')->None:
     """
-    Displays a message in a small window like a tooltip
+    Displays a message in a small window like a tooltip.  Note a function attribute "window" must be set when program starts in order for this function to work
     :param message:         The text message to display
     :type message:          str
     """
-    location = display_message.window.current_location()
-    location =  (location[0]-len(message)*2, location[1]+70)
-    # if location is not None:
-    #     location = (location[0]-len(message)*2, location[1]+70)
+    location = display_message.window.current_location()            # cheating and assuming there is a function attribute set that holds the icon's window
+    location =  (location[0]-len(message)*2, location[1]+70)        # show the message just under the icon
     sg.popup_quick_message(message, font='_ 10', location=location,  background_color="#ffffe0",text_color='black', auto_close_duration=5)
 
 
@@ -289,12 +359,16 @@ dP  dP  dP `88888P8 dP dP    dP
 
 """
 def main():
+    # sg.theme('dark red')          # try another theme... the mini windows look nice
 
     # get settings from settings file
     b64icon = sg.user_settings_get_entry(KEY_PNG_ICON_BASE64, None)
     pngicon = sg.user_settings_get_entry(KEY_PNG_ICON_FILENAME, None)
     keep_on_top = sg.user_settings_get_entry('-keep on top-', False)
-
+    try:
+        alpha = int(sg.user_settings_get_entry(KEY_ALPHA, 10))/10
+    except:
+        alpha = 1
     # set the icon to use
     if b64icon:
         icon = bytes(b64icon, 'utf-8')
@@ -308,9 +382,9 @@ def main():
     RIGHT_CLICK_MENU = ['', ['Settings', 'Edit Me', f'Keep on top is {"ON" if keep_on_top else "OFF"}', 'Version', 'Exit']]
     layout = [[sg.Image(source=icon, key='-IMAGE-', p=0, background_color='black', enable_events=True)]]
 
-    window = sg.Window('Desktop Icon Demo', layout, element_justification='center', resizable=True, no_titlebar=True, right_click_menu=RIGHT_CLICK_MENU, margins=(0,0), grab_anywhere=True, auto_save_location=True, keep_on_top=keep_on_top,  finalize=True, alpha_channel=int(sg.user_settings_get_entry(KEY_ALPHA, 10))/10)
+    window = sg.Window('Desktop Icon Demo', layout, element_justification='center', resizable=True, no_titlebar=True, right_click_menu=RIGHT_CLICK_MENU, margins=(0,0), grab_anywhere=True, auto_save_location=True, keep_on_top=keep_on_top,  finalize=True, alpha_channel=alpha)
 
-    display_message.window=window
+    display_message.window = window           # important.... need to set this function attribute for the display message function to work... sorry, it's a hack
 
     dnd.register_element_dnd(window['-IMAGE-'], window, dnd.DROP_TYPE_ALL)        # The one line of code needed to add drag and drop
 
