@@ -136,4 +136,5 @@ def _reformat_filenames(filenames: str) -> str:
 
 # just in case module is called
 def main():
+    print(f'psgdnd version is {version}')
     return
