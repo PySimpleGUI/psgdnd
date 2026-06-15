@@ -93,7 +93,6 @@ def show_settings_window(location:Tuple[int, int]):
     """
 
     layout = [[sg.T('Drag and Drop Icon Settings', font='_ 15')],
-              [sg.Input(setting='', key=KEY_REMOVABLE_FOLDER, s=40), sg.T('Path to Removable Disk')],
               [sg.Input(setting=0, justification='r', s=3, k=KEY_JPG_QUALITY), sg.T('%  Default JPG quality', p=(None, (0,2)))],
               [sg.Input(setting=10, justification='r', s=3, k=KEY_ALPHA), sg.T('Alpha channel for icon (1-10)')],
               [sg.Input(setting='', justification='r', s=40, k=KEY_PNG_ICON_FILENAME), sg.T('Icon filename')],
@@ -232,7 +231,8 @@ def image_popup(filenames:str, location):
         button_size = max(len(a) for a in actions)
         layout = [[sg.Text('Images dropped - What do you want to do with them?')],
                   [sg.Text('\n'.join(file_list))],
-                  [[sg.Button(action, s=button_size)] for action in actions],]
+                  [sg.Column([[sg.Button(action, s=button_size, )] for action in actions], justification='c')]]
+
         convert_window = MiniWindow('Image actions', layout, location=location, alpha_channel=0)
         convert_window.refresh()
         convert_window.move(location[0] - convert_window.size[0], location[1] - convert_window.size[1])
@@ -274,7 +274,7 @@ def text_popup(text:str, location):
     button_size = max(len(a) for a in actions)
     layout = [[sg.Text('Text dropped - What do you want to do with it?')],
               [sg.Text('' if translate_installed else '* NOTE * Unable to use translate features. You need to install googletrans: pip install googletrans==3.1.0a0')],
-              [[sg.Button(action, s=button_size)] for action in actions],]
+              [sg.Column([[sg.Button(action, s=button_size, )] for action in actions], justification='c')]]
     convert_window = MiniWindow('Text actions', layout, location=location, alpha_channel=0)
     convert_window.refresh()
     convert_window.move(location[0] - convert_window.size[0], location[1] - convert_window.size[1])
