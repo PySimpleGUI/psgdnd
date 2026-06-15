@@ -314,7 +314,7 @@ def wrap_in_border(title: str, layout_rows: list, close_key: Any = 'Exit') -> li
     """
 
     titlebar = [sg.Text("▌", text_color=sg.theme_button_color_background(), font=("Segoe UI", 14)),
-                sg.Text(title, font=("Segoe UI", 10, "bold"), expand_x=True),
+                sg.Text(title, font=("Segoe UI", 14, "bold"), expand_x=True),
                 sg.Button("✕", key=close_key, border_width=0,  font=("Segoe UI", 11, "bold"), mouseover_colors=("#ffffff", "#a13544"), tooltip="Close")]
 
     layout = [[sg.Column([titlebar], expand_x=True, pad=(0, 0))],
