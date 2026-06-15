@@ -7,6 +7,7 @@ from PIL import Image
 import PySimpleGUI as sg
 import psgdnd as dnd
 from pathlib import Path
+from packaging.version import Version
 try:
     from googletrans import Translator
     translate_installed = True
@@ -51,7 +52,7 @@ Copyright 2026 PySimpleGUI. All rights reserved.
 """
 
 
-version = '6.1'
+version = '6.2'
 __version__ = version.split()[0]
 
 """
@@ -59,6 +60,7 @@ Changelog since last major release
 
 6.0     9-Jun-2026      Initial release
 6.1     14-Jun-2026     Addition of mini windows, made googletrans an optional package,  error checking, bug fixes
+6.2     14-Jun-2026     Added checking that the PySimpleGUI version is at least 6.2.  If not, offer to install it
 """
 
 
@@ -89,6 +91,7 @@ def show_settings_window(location:Tuple[int, int]):
     :param location:        Location of the icon window
     :type location:         Tuple[int, int]
     """
+
     layout = [[sg.T('Drag and Drop Icon Settings', font='_ 15')],
               [sg.Input(setting='', key=KEY_REMOVABLE_FOLDER, s=40), sg.T('Path to Removable Disk')],
               [sg.Input(setting=0, justification='r', s=3, k=KEY_JPG_QUALITY), sg.T('%  Default JPG quality', p=(None, (0,2)))],
@@ -97,10 +100,11 @@ def show_settings_window(location:Tuple[int, int]):
               [sg.Input(setting='', justification='r', s=40, k=KEY_PNG_ICON_BASE64), sg.T('Icon Base64')],
               [sg.Push(), sg.OK(), sg.Cancel()]]
 
-    window = MiniWindow('Settings', layout, location=location)
+    window = MiniWindow('Settings', layout, location=location, alpha_channel=0)
     window.settings_restore()
     window.refresh()
     window.move(location[0]-window.size[0]-10, location[1]-window.size[1])
+    window.set_alpha(1)
     while True:
         event, values = window.read()
         if event in (sg.WIN_CLOSED, 'Cancel', 'Exit'):
@@ -229,9 +233,10 @@ def image_popup(filenames:str, location):
         layout = [[sg.Text('Images dropped - What do you want to do with them?')],
                   [sg.Text('\n'.join(file_list))],
                   [[sg.Button(action, s=button_size)] for action in actions],]
-        convert_window = MiniWindow('Image actions', layout, location=location)
+        convert_window = MiniWindow('Image actions', layout, location=location, alpha_channel=0)
         convert_window.refresh()
         convert_window.move(location[0] - convert_window.size[0], location[1] - convert_window.size[1])
+        convert_window.set_alpha(1)
         event, values = convert_window.read(close=True)
         # Perform actions
         if event.startswith('Convert'):
@@ -270,9 +275,10 @@ def text_popup(text:str, location):
     layout = [[sg.Text('Text dropped - What do you want to do with it?')],
               [sg.Text('' if translate_installed else '* NOTE * Unable to use translate features. You need to install googletrans: pip install googletrans==3.1.0a0')],
               [[sg.Button(action, s=button_size)] for action in actions],]
-    convert_window = MiniWindow('Text actions', layout, location=location)
+    convert_window = MiniWindow('Text actions', layout, location=location, alpha_channel=0)
     convert_window.refresh()
     convert_window.move(location[0] - convert_window.size[0], location[1] - convert_window.size[1])
+    convert_window.set_alpha(1)
     event, values = convert_window.read(close=True)
     # Perform actions
     if event.startswith('Translate'):
@@ -331,9 +337,7 @@ def MiniWindow(title: str, layout: List, **kwargs) -> sg.Window:
     """
     # first embed the supplied layout into a layout that has a fake titlebar and frame used to draw the border
     layout = wrap_in_border(title, layout)
-    return sg.Window(title, layout, no_titlebar=True, grab_anywhere=True, keep_on_top=True,
-                    finalize=True,
-                    margins=(0, 0), alpha_channel=0.96, **kwargs)
+    return sg.Window(title, layout, no_titlebar=True, grab_anywhere=True, keep_on_top=True, finalize=True, margins=(0, 0), **kwargs)
 
 
 
@@ -423,4 +427,10 @@ def main():
     window.close()
 
 if __name__ == '__main__':
+    if Version(sg.version) < Version("6.2"):
+        if sg.popup_yes_no('PySimpleGUI version error', 'PySimpleGUI version 6.2 or greater is required to run this program.', 'To pip install it, execute the command:', r'python -m pip install --upgrade https://github.com/PySimpleGUI/PySimpleGUI/zipball/6.1', 'Would you like to install this version now?') == 'Yes':
+            sg.execute_pip_install_package(r'https://github.com/PySimpleGUI/PySimpleGUI/zipball/master/6.2')
+        else:
+            print('Exiting')
+            exit()
     main()
