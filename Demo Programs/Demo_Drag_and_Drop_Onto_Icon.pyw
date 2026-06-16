@@ -315,7 +315,7 @@ def wrap_in_border(title: str, layout_rows: list, close_key: Any = 'Exit') -> li
 
     titlebar = [sg.Text("▌", text_color=sg.theme_button_color_background(), font=("Segoe UI", 14)),
                 sg.Text(title, font=("Segoe UI", 14, "bold"), expand_x=True),
-                sg.Button("✕", key=close_key, border_width=0,  font=("Segoe UI", 11, "bold"), mouseover_colors=("#ffffff", "#a13544"), tooltip="Close")]
+                sg.Button(sg.SYMBOL_X_SMALL, key=close_key, border_width=0, pad=(2,0), font=("Segoe UI", 11, "bold"), mouseover_colors=("#ffffff", "#a13544"), tooltip="Close")]
 
     layout = [[sg.Column([titlebar], expand_x=True, pad=(0, 0))],
               [sg.HorizontalSeparator(color=sg.theme_text_color(),  pad=(0, 0))],
@@ -383,7 +383,7 @@ def main():
 
     #------- GUI definition & setup --------#
 
-    RIGHT_CLICK_MENU = ['', ['Settings', 'Edit Me', f'Keep on top is {"ON" if keep_on_top else "OFF"}', 'Version', 'Exit']]
+    RIGHT_CLICK_MENU = ['', ['Settings', f'Keep on top is {"ON" if keep_on_top else "OFF"}', 'Edit Me', 'Version', 'Exit']]
     layout = [[sg.Image(source=icon, key='-IMAGE-', p=0, background_color='black', enable_events=True)]]
 
     window = sg.Window('Desktop Icon Demo', layout, element_justification='center', resizable=True, no_titlebar=True, right_click_menu=RIGHT_CLICK_MENU, margins=(0,0), grab_anywhere=True, auto_save_location=True, keep_on_top=keep_on_top,  finalize=True, alpha_channel=alpha)
