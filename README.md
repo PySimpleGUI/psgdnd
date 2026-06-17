@@ -5,7 +5,7 @@
   <h2 align="center">Drag and Drop for PySimpleGUI</h2>
 </p>
 
-<p align="center"><img width="850" height="429" src="psgdnd_screenshot.gif"><p>
+<p align="center"><img width="850" height="429" src="https://raw.githubusercontent.com/PySimpleGUI/psgdnd/refs/heads/main/psgdnd_screenshot.gif"><p>
 
 
 ## Description
