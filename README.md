@@ -19,7 +19,14 @@ This is super-early stage code and design, very much a work in progress.  More e
 
 ## Installation using Pip
 
-The `psgdnd` package is still at an early stage and not ready for distribution on PyPI.  Instead you can pip install it from this repo by running:
+To get the most recent release to PyPI:
+
+```bash
+python -m pip install --upgrade psgdnd
+```
+
+
+To get the most up to date code that's not yet released, pip install directly from this repo by running:
 
 ```bash
 python -m pip install --upgrade https://github.com/PySimpleGUI/psgdnd/zipball/main
