@@ -3,14 +3,41 @@ from tkinterdnd2 import TkinterDnD, DND_FILES, DND_TEXT, DND_ALL, CF_UNICODETEXT
 import re
 
 
-version = '6.0.1'
+version = '6.0'
 __version__ = version.split()[0]
 
 """
 Changelog 
 
-6.0         7-Jun-2026 Initial release
-6.0.1       8-Jun-2026 Added docstrings
+6.0          7-Jun-2026 Initial release to GitHub
+6.0         27-Jun-2026 Release to PyPI
+"""
+
+
+#                            __              __
+#                           /\ \            /\ \
+#  _____     ____     __    \_\ \    ___    \_\ \
+# /\ '__`\  /',__\  /'_ `\  /'_` \ /' _ `\  /'_` \
+# \ \ \L\ \/\__, `\/\ \L\ \/\ \L\ \/\ \/\ \/\ \L\ \
+#  \ \ ,__/\/\____/\ \____ \ \___,_\ \_\ \_\ \___,_\
+#   \ \ \/  \/___/  \/___L\ \/__,_ /\/_/\/_/\/__,_ /
+#    \ \_\            /\____/
+#     \/_/            \_/__/
+
+
+"""
+    psgdnd module - Drag and Drop support for PySimpleGUI using tkinterdnd2
+
+    Experimental / Prototype
+
+    Drag and drop demo using tkinterdnd2 (installed as part of psgdnd)
+        python -m pip install tkinterdnd2
+    Routes drop event through the window.read.
+
+    pip install psgdnd
+    Then import into your project to extend PySimpleGUI to support drag and drop
+
+    Copyright 2018-2026 PySimpleGUI. All rights reserved.
 """
 
 
@@ -27,20 +54,6 @@ DROP_TYPE_TEXT = 'TEXT'
 DROP_TYPE_FILES = 'FILES'
 DROP_TYPE_ALL = 'ALL'
 DROP_TYPE_UNKNOWN = 'UNKNOWN'
-
-
-"""
-    Drag and Drop support for PySimpleGUI using tkinterdnd2
-
-    Experimental / Prototype
-
-    Drag and drop demo using tkinterdnd2 (installed as part of psgdnd)
-        python -m pip install tkinterdnd2
-    Routes drop event through the window.read.
-       
-
-    Copyright 2018-2026 PySimpleGUI. All rights reserved.
-"""
 
 
 def is_drop_event(event):
