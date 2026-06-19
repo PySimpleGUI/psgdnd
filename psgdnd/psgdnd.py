@@ -3,15 +3,17 @@ from tkinterdnd2 import TkinterDnD, DND_FILES, DND_TEXT, DND_ALL, CF_UNICODETEXT
 import re
 
 
-version = '6.0'
+
+version = '6.0.2'
 __version__ = version.split()[0]
 
 """
 Changelog 
 
-6.0          7-Jun-2026 Initial release to GitHub
-6.0         27-Jun-2026 Release to PyPI
+6.0         17-Jun-2026 Release to PyPI
+6.0.2       19-Jun-2026 Added support for Linux. Needed to handle different drop events from tkinterdnd2
 """
+
 
 
 #                            __              __
@@ -42,18 +44,36 @@ Changelog
 
 
 class DropEvent(object):
-    def __init__(self, window, key, element, drop_type):
+    def __init__(self, window, key, element, drop_type, tkdnd_type):
+        """
+        The object that carries drag and drop events to the PySimpleGUI event loop. The event will be one of these objects
+        when a drag and drop event happens
+        :param window:                  The window receiving the drop
+        :type window:                   (sg.Window)
+        :param key:                     The key of the element dropped onto
+        :type key:                      (str)
+        :param element:                 The element object dropped onto
+        :type element:                  (sg.Element)
+        :param drop_type:               Type of drop. Values are constants DROP_TYPE_TEXT, DROP_TYPE_FILES, DROP_TYPE_ALL, DROP_TYPE_DROP_TYPE_UNKNOWN
+        :type drop_type:                (str)
+        :param tkdnd_type:              Type of drop reported by tkinterdnd2
+        :type tkdnd_type:               (str)
+        """
         self.key = key
         self.element = element
         self.drop_type = drop_type
         self.window = window
-
+        self.tkdnd_type = tkdnd_type
 
 # PySimpleGUI drop type constants
 DROP_TYPE_TEXT = 'TEXT'
 DROP_TYPE_FILES = 'FILES'
 DROP_TYPE_ALL = 'ALL'
 DROP_TYPE_UNKNOWN = 'UNKNOWN'
+
+#  Additional drop types that can come through tkinterdnd2.  These were seen on Zorin Linux
+TK_DROP_TYPE_URI_LIST = 'text/uri-list'
+TK_DROP_TYPE_UTF8_STRING = 'UTF8_STRING'
 
 
 def is_drop_event(event):
@@ -68,6 +88,15 @@ def is_drop_event(event):
 
     return isinstance(event, DropEvent)
 
+
+def _enable_logging():
+    """
+    Turns on logging
+
+    """
+    global logging_enabled
+
+    logging_enabled = True
 
 def register_element_dnd(element: sg.Element, window: sg.Window, drop_type=DROP_TYPE_ALL):
     """
@@ -93,7 +122,6 @@ def register_element_dnd(element: sg.Element, window: sg.Window, drop_type=DROP_
     else:
         print(f'ERROR Bad drop type in register_element_dnd.  {drop_type=}')
         return
-
     # Bind drop event to the widget.  Set callback function on_drop
     element.widget.dnd_bind("<<Drop>>", lambda event, element=element, window=window: on_drop(event, element, window))
 
@@ -113,18 +141,18 @@ def on_drop(event, element: sg.Element, window: sg.Window):
 
     # When drop event happens, send event to event loop.
     # Event generated will be a DropEvent object
-    # print(f'{event.type=}')
-    if event.type in (CF_TEXT, CF_UNICODETEXT):
+
+    if event.type in (CF_TEXT, CF_UNICODETEXT, DND_TEXT, TK_DROP_TYPE_UTF8_STRING):
         drop_type = DROP_TYPE_TEXT
         value_data = event.data
-    elif event.type == CF_HDROP:
+    elif event.type in (CF_HDROP, DND_FILES, TK_DROP_TYPE_URI_LIST):
         drop_type = DROP_TYPE_FILES
         value_data = _reformat_filenames(event.data)
     else:
         drop_type = DROP_TYPE_UNKNOWN
         value_data = event.data
 
-    drop_event = DropEvent(window=window, key=element.key, element=element, drop_type=drop_type)       # Fill in a DropEvent object
+    drop_event = DropEvent(window=window, key=element.key, element=element, drop_type=drop_type, tkdnd_type=event.type)       # Fill in a DropEvent object
     window.write_event_value(drop_event, value_data)                                                   # Send the DropEvent object as event to the window
 
 
