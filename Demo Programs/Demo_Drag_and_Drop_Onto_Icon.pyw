@@ -428,8 +428,10 @@ def main():
 
 if __name__ == '__main__':
     if Version(sg.version) < Version("6.2"):
-        if sg.popup_yes_no('PySimpleGUI version error', 'PySimpleGUI version 6.2 or greater is required to run this program.', 'To pip install it, execute the command:', r'python -m pip install --upgrade https://github.com/PySimpleGUI/PySimpleGUI/zipball/6.1', 'Would you like to install this version now?') == 'Yes':
-            sg.execute_pip_install_package(r'https://github.com/PySimpleGUI/PySimpleGUI/zipball/master/6.2')
+        if sg.popup_yes_no('PySimpleGUI version error', 'PySimpleGUI version 6.2 or greater is required to run this program.', 'To pip install it, execute the command:', r'python -m pip install --upgrade PySimpleGUI', 'Would you like to install this version now?') == 'Yes':
+            sg.execute_pip_install_package(r'PySimpleGUI')
+            sg.popup_auto_close('Please restart the application to use the newly installed PySimpleGUI package.', auto_close_duration=3)
+            exit()
         else:
             print('Exiting')
             exit()
