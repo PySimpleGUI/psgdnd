@@ -174,8 +174,3 @@ def _reformat_filenames(filenames: str) -> str:
     return ','.join(a or b for a, b in files)
 
 
-
-# just in case module is called
-def main():
-    print(f'psgdnd version is {version}')
-    return
