@@ -56,7 +56,7 @@ class DropEvent(object):
         :type element:                  (sg.Element)
         :param drop_type:               Type of drop. Values are constants DROP_TYPE_TEXT, DROP_TYPE_FILES, DROP_TYPE_ALL, DROP_TYPE_DROP_TYPE_UNKNOWN
         :type drop_type:                (str)
-        :param tkdnd_type:              Type of drop reported by tkinterdnd2
+        :param tkdnd_type:              Type of drop reported by tkinterdnd2 (for debugging or perhaps hacking until a bug gets fixed)
         :type tkdnd_type:               (str)
         """
         self.key = key
