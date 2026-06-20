@@ -420,7 +420,7 @@ def main():
             window['-IMAGE-'].set_right_click_menu(RIGHT_CLICK_MENU)
             sg.user_settings_set_entry('-keep on top-', event.endswith("OFF"))
         elif event == 'Version':
-            sg.popup_scrolled(sg.get_versions(), f'This Program: {__file__}', keep_on_top=True, non_blocking=True, button_justification='right')
+            sg.popup_scrolled(sg.get_versions(), f'This Program: {__file__}', f'psgdnd version: {dnd.version}', keep_on_top=True, non_blocking=True, button_justification='right')
         elif event == 'Edit Me':
             sg.execute_editor(__file__)
 
