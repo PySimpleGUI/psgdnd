@@ -72,10 +72,9 @@ DROP_TYPE_FILES = 'FILES'
 DROP_TYPE_ALL = 'ALL'
 DROP_TYPE_UNKNOWN = 'UNKNOWN'
 
-#  Additional drop types that can come through tkinterdnd2.  These were seen on Zorin Linux
-TK_DROP_TYPE_URI_LIST = 'text/uri-list'
-TK_DROP_TYPE_UTF8_STRING = 'UTF8_STRING'
-
+# Lists of all possible events for text type drops and file type drops
+TEXT_TYPES = (CF_TEXT, CF_UNICODETEXT, DND_TEXT, 'UTF8_STRING', 'STRING', 'COMPOUND_TEXT', 'TEXT', 'text/plain', 'text/plain;charset=utf-8')
+FILE_TYPES = (CF_HDROP, DND_FILES, 'text/uri-list')
 
 def is_drop_event(event):
     """
@@ -143,10 +142,10 @@ def on_drop(event, element: sg.Element, window: sg.Window):
     # When drop event happens, send event to event loop.
     # Event generated will be a DropEvent object
 
-    if event.type in (CF_TEXT, CF_UNICODETEXT, DND_TEXT, TK_DROP_TYPE_UTF8_STRING):
+    if event.type in TEXT_TYPES:
         drop_type = DROP_TYPE_TEXT
         value_data = event.data
-    elif event.type in (CF_HDROP, DND_FILES, TK_DROP_TYPE_URI_LIST):
+    elif event.type in FILE_TYPES:
         drop_type = DROP_TYPE_FILES
         value_data = _reformat_filenames(event.data)
     else:
