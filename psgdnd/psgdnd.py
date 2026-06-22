@@ -4,7 +4,7 @@ import re
 
 
 
-version = '6.0.2'
+version = '6.0.3'
 __version__ = version.split()[0]
 
 """
@@ -12,6 +12,7 @@ Changelog
 
 6.0         17-Jun-2026 Release to PyPI
 6.0.2       19-Jun-2026 Added support for Linux. Needed to handle different drop events from tkinterdnd2
+6.0.3       21-Jun-2026 Release Linux fixes to PyPI
 """
 
 
