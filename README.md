@@ -35,7 +35,7 @@ python -m pip install --upgrade https://github.com/PySimpleGUI/psgdnd/zipball/ma
 > [!CAUTION]
 > Linux is having issues....
 >
-> The release 6.0.1 that was just posted to PyPI was found to not be working correctly on Linux (at least on Zorin that I used).  Fixes were put into version 6.0.2 and posted to GitHub. The changes were then posted as 6.0.3 to PyPI. If you're on Linux then you should upgrade to the latest. Be sure you are running on X11 or drag and drop will not work.
+> The release 6.0.1 that was just posted to PyPI was found to not be working correctly on Linux (at least on Zorin that I used).  Fixes were put into version 6.0.2 and posted to GitHub. The changes were then posted as 6.0.4 to PyPI. If you're on Linux then you should upgrade to the latest. Be sure you are running on X11 or drag and drop will not work.
 > 
 > Unknown if the Mac is working yet.  More testing is clearly needed.
  
