@@ -3,11 +3,14 @@ import io
 import os
 import webbrowser
 from typing import Tuple, Union, List, Any
+
 from PIL import Image
 import PySimpleGUI as sg
 import psgdnd as dnd
 from pathlib import Path
 from packaging.version import Version
+
+
 try:
     from googletrans import Translator
     translate_installed = True
@@ -52,7 +55,7 @@ Copyright 2026 PySimpleGUI. All rights reserved.
 """
 
 
-version = '6.2.1'
+version = '6.2.2'
 __version__ = version.split()[0]
 
 """
@@ -62,6 +65,9 @@ Changelog since last major release
 6.1     14-Jun-2026     Addition of mini windows, made googletrans an optional package,  error checking, bug fixes
 6.2     14-Jun-2026     Added checking that the PySimpleGUI version is at least 6.2.  If not, offer to install it
 6.2.1   25-Jun-2026     Added support for converting to WebP image format
+6.2.2   25-Jun-2026     Show program and modules versions in the settings window
+                        Added support for resizing the images using absolute pixels or %
+                        Show the image size and dimensions along with filename
 """
 
 
@@ -98,6 +104,10 @@ def show_settings_window(location:Tuple[int, int]):
               [sg.Input(setting=10, justification='r', s=3, k=KEY_ALPHA), sg.T('Alpha channel for icon (1-10)')],
               [sg.Input(setting='', justification='r', s=40, k=KEY_PNG_ICON_FILENAME), sg.T('Icon filename')],
               [sg.Input(setting='', justification='r', s=40, k=KEY_PNG_ICON_BASE64), sg.T('Icon Base64')],
+              [sg.T('Versions',font=('default', 14, 'bold'), p=0)],
+              [sg.T(f'{version:6} this program', p=0)],
+              [sg.T(f'{dnd.version:6} psgdnd', p=0)],
+              [sg.T(f'{sg.version:6} PySimpleGUI', p=0)],
               [sg.Push(), sg.OK(), sg.Cancel()]]
 
     window = MiniWindow('Settings', layout, location=location, alpha_channel=0)
@@ -138,7 +148,7 @@ dP dP  dP  dP `88888P8 `8888P88 `88888P'
 dP                                                                          d8888P
 """
 
-def convert_formats(input_file:str, encode_format:str='PNG') -> bool:
+def convert_formats(input_file:str, encode_format:str='PNG', resize_percent=None, resize_w_h=(None, None)) -> bool:
     """
     Converts an image file to the specified format (PNG or JPEG).
 
@@ -146,8 +156,10 @@ def convert_formats(input_file:str, encode_format:str='PNG') -> bool:
     :type input_file:           str
     :param encode_format:       The target format for the image conversion ('PNG' or 'JPEG'), defaults to 'PNG'.
     :type encode_format:        str
-    :return:                    True if the file was successfully converted and saved, False if the target file already exists.
-    :rtype:                     bool
+    :type resize_percent:       Percentage amount to scale the image
+    :param resize_percent:      in
+    :param resize_w_h:          The width and height of the image to be resized
+    :type resize_w_h:           Tuple[int, int] | Tuple[None, None}
     """
     jpg_quality = None
 
@@ -160,18 +172,31 @@ def convert_formats(input_file:str, encode_format:str='PNG') -> bool:
             jpg_quality = int(sg.user_settings_get_entry(KEY_JPG_QUALITY, DEFAULT_JPG_QUALITY))
         except:
             jpg_quality = DEFAULT_JPG_QUALITY
+
+    w, h = image.size
+    if resize_percent is None and resize_w_h == (None, None):       # if no resize is happening
+        resized_image = image
+        size_string = ''
+    else:
+        if resize_percent is not None:
+            scale = resize_percent / 100
+        elif resize_w_h != (None, None):
+            scale = min(resize_w_h[0] / w, resize_w_h[1] / h)
+        new_w, new_h = int(w * scale), int(h * scale)
+        print(f'New size will be: {new_w, new_h}')
+        resized_image = image.resize((new_w, new_h), Image.LANCZOS)
+        size_string = f'{new_w}x{new_h}'
+
     path = Path(input_file)
-    output_file = path.with_name(path.stem).with_suffix('.'+encode_format.lower())
+    output_file = path.with_name(path.stem + size_string + '.' + encode_format.lower())
     # print(f'{output_file=}')
     if not os.path.exists(output_file):
         if jpg_quality:
-            image.save(output_file, quality=jpg_quality)
+            resized_image.save(output_file, quality=jpg_quality)
         else:
-            image.save(output_file)
+            resized_image.save(output_file)
     else:
-        return False
-    return True
-
+        print(f'Warning - file exists, skipping overwrite {output_file}')
 
 def encode_image_base64(input_file):
     """
@@ -198,6 +223,24 @@ def encode_image_base64(input_file):
     display_message(f'B64PNG encoded {input_file}')
     return encoded
 
+
+def get_image_size_and_dimensions(filename, as_text=True):
+    """
+
+    :param filename:    image filename
+    :type filename:     str
+    :param as_text:     if True then return will be info as a single string
+    :type as_text:      bool
+    :return:            size in bytesm, width, height
+    :rtype:             Tuple[int, int, int]
+    """
+    image = Image.open(filename)
+    width, height = image.size
+    size_bytes = Path(filename).stat().st_size
+    size_kb = size_bytes / 1024
+    if as_text:
+        return f"{size_kb:.1f} KB - {width} X {height}"
+    return size_kb, width, height
 
 """
                                                            oo          
@@ -226,30 +269,55 @@ def image_popup(filenames:str, location):
     file_list = filenames.split(',')
     # if len(file_list) == 1:                 # If single item, see if it's a flash drive for photos
     #     sg.popup(f'Single file = {file_list[0]}')
-    actions = ('Convert to JPG', 'Convert to PNG', 'Convert to GIF', 'Convert to ICO', 'Convert to Base64-PNG', 'Convert to WEBP', 'Cancel')
+    actions = ('Convert to JPG', 'Convert to PNG', 'Convert to GIF', 'Convert to ICO',  'Convert to WEBP','Convert to Base64-PNG', 'Cancel')
     image_files = all(file.endswith(('jpeg', 'jpg', 'png', 'gif', 'ico', 'webp')) for file in file_list)
     if image_files:
         button_size = max(len(a) for a in actions)
         layout = [[sg.Text('Images dropped - What do you want to do with them?')],
-                  [sg.Text('\n'.join(file_list))],
-                  [sg.Column([[sg.Button(action, s=button_size, )] for action in actions], justification='c')]]
+                  [[sg.Text(f'{get_image_size_and_dimensions(file)} - {file}', p=0)] for file in file_list],
+                  # [sg.Text('\n'.join(file_list))],
+                  [sg.Column([[sg.Button(action, s=button_size, )] for action in actions], justification='c')],
+                  [sg.Push(), sg.Frame('', [[sg.Checkbox('Optional resizing', setting=False, font=('default', 14, 'bold'), k='-RESIZE-', p=((20,0),0))],
+                  [sg.Input(setting='', justification='r', s=4, k='-RESIZE PERCENT-', p=((20,0),0)), sg.T('%')],
+                  [sg.Input(setting='', justification='r', s=4, k='-RESIZE WIDTH-', p=((20,0),0)), sg.T('X'), sg.Input(setting='', justification='r', s=4, k='-RESIZE HEIGHT-',p=0)],
+                                                              [sg.Button('Clear')]], border_width_no_relief=1), sg.Push()]]
 
         convert_window = MiniWindow('Image actions', layout, location=location, alpha_channel=0)
         convert_window.refresh()
         convert_window.move(location[0] - convert_window.size[0], location[1] - convert_window.size[1])
         convert_window.set_alpha(1)
-        event, values = convert_window.read(close=True)
-        # Perform actions
-        if event.startswith('Convert'):
-            image_format = event.split()[-1]                # The image format is always at the end of the button string
-            encode_only = image_format == 'Base64-PNG'      # If is basse64 format, then do a special encode
-            for file in file_list:
-                if encode_only:
-                    sg.clipboard_set(encode_image_base64(file))
-                else:
-                    convert_formats(file, image_format)
-                    display_message(f'Converted {file} to {image_format}')
+        convert_window.settings_restore()
+
+        while True:
+            event, values = convert_window.read()
+            if event in ('Exit', sg.WIN_CLOSED):
+                break
+            # Perform actions
+            if event.startswith('Convert'):
+                image_format = event.split()[-1]                # The image format is always at the end of the button string
+                encode_only = image_format == 'Base64-PNG'      # If is basse64 format, then do a special encode
+                for file in file_list:
+                    if encode_only:
+                        sg.clipboard_set(encode_image_base64(file))
+                    else:
+                        if values['-RESIZE-']:
+                            percent = values['-RESIZE PERCENT-']
+                            percent = None if not percent else int(percent)
+                            width, height = values['-RESIZE WIDTH-'], values['-RESIZE HEIGHT-']
+                            resize_w_h = (int(width), int(height)) if width and height else (None, None)
+                        else:
+                            percent, resize_w_h = None, (None, None)
+                        convert_formats(file, image_format, percent, resize_w_h)
+                        display_message(f'Converted {file} to {image_format}')
+                break
+            elif event == 'Clear':
+                convert_window['-RESIZE PERCENT-'].update('')
+                convert_window['-RESIZE WIDTH-'].update('')
+                convert_window['-RESIZE HEIGHT-'].update('')
+        convert_window.settings_save(values)
+        convert_window.close()
     else:
+        # if they're not image files just show the list of files
         layout = [[sg.Text('Files dropped:', font='_ 15', p=(10,0))]]
         for file in file_list:
             layout.append([sg.Text(file, p=(10,0))])
