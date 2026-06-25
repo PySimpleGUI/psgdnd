@@ -52,7 +52,7 @@ Copyright 2026 PySimpleGUI. All rights reserved.
 """
 
 
-version = '6.2'
+version = '6.2.1'
 __version__ = version.split()[0]
 
 """
@@ -61,6 +61,7 @@ Changelog since last major release
 6.0     9-Jun-2026      Initial release
 6.1     14-Jun-2026     Addition of mini windows, made googletrans an optional package,  error checking, bug fixes
 6.2     14-Jun-2026     Added checking that the PySimpleGUI version is at least 6.2.  If not, offer to install it
+6.2.1   25-Jun-2026     Added support for converting to WebP image format
 """
 
 
@@ -225,8 +226,8 @@ def image_popup(filenames:str, location):
     file_list = filenames.split(',')
     # if len(file_list) == 1:                 # If single item, see if it's a flash drive for photos
     #     sg.popup(f'Single file = {file_list[0]}')
-    actions = ('Convert to JPG', 'Convert to PNG', 'Convert to GIF', 'Convert to ICO', 'Convert to Base64-PNG', 'Cancel')
-    image_files = all(file.endswith(('jpeg', 'jpg', 'png', 'gif', 'ico')) for file in file_list)
+    actions = ('Convert to JPG', 'Convert to PNG', 'Convert to GIF', 'Convert to ICO', 'Convert to Base64-PNG', 'Convert to WEBP', 'Cancel')
+    image_files = all(file.endswith(('jpeg', 'jpg', 'png', 'gif', 'ico', 'webp')) for file in file_list)
     if image_files:
         button_size = max(len(a) for a in actions)
         layout = [[sg.Text('Images dropped - What do you want to do with them?')],
