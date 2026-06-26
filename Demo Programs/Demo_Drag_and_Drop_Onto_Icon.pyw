@@ -10,7 +10,6 @@ import psgdnd as dnd
 from pathlib import Path
 from packaging.version import Version
 
-
 try:
     from googletrans import Translator
     translate_installed = True
@@ -55,7 +54,7 @@ Copyright 2026 PySimpleGUI. All rights reserved.
 """
 
 
-version = '6.2.2'
+version = '6.2.3'
 __version__ = version.split()[0]
 
 """
@@ -68,20 +67,20 @@ Changelog since last major release
 6.2.2   25-Jun-2026     Show program and modules versions in the settings window
                         Added support for resizing the images using absolute pixels or %
                         Show the image size and dimensions along with filename
+6.2.3   25-Jun-2026     Added ability to both convert to base64 PNG and resize the image (first)
+                        Better settings save by adding close attempted events to the window so that there are values to save
+                        New brighter figlets                        
 """
 
 
 
-"""
-                    dP     dP   oo                            
-                    88     88                                 
-.d8888b. .d8888b. d8888P d8888P dP 88d888b. .d8888b. .d8888b. 
-Y8ooooo. 88ooood8   88     88   88 88'  `88 88'  `88 Y8ooooo. 
-      88 88.  ...   88     88   88 88    88 88.  .88       88 
-`88888P' `88888P'   dP     dP   dP dP    dP `8888P88 `88888P' 
-                                                 .88          
-                                             d8888P
-"""
+#   ███████╗███████╗████████╗████████╗██╗███╗   ██╗ ██████╗ ███████╗
+#   ██╔════╝██╔════╝╚══██╔══╝╚══██╔══╝██║████╗  ██║██╔════╝ ██╔════╝
+#   ███████╗█████╗     ██║      ██║   ██║██╔██╗ ██║██║  ███╗███████╗
+#   ╚════██║██╔══╝     ██║      ██║   ██║██║╚██╗██║██║   ██║╚════██║
+#   ███████║███████╗   ██║      ██║   ██║██║ ╚████║╚██████╔╝███████║
+#   ╚══════╝╚══════╝   ╚═╝      ╚═╝   ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝
+
 # ---------- CONSTANTS ----------
 KEY_REMOVABLE_FOLDER = '-REMOVABLE FOLDER-'
 KEY_JPG_QUALITY = '-JPG QUALITY-'
@@ -129,26 +128,21 @@ def show_settings_window(location:Tuple[int, int]):
 
 
 
-"""
-oo                                       
-                                         
-dP 88d8b.d8b. .d8888b. .d8888b. .d8888b. 
-88 88'`88'`88 88'  `88 88'  `88 88ooood8 
-88 88  88  88 88.  .88 88.  .88 88.  ... 
-dP dP  dP  dP `88888P8 `8888P88 `88888P' 
-                            .88          
-                        d8888P           
-                                                               oo                   
-                                                                                    
-88d888b. 88d888b. .d8888b. .d8888b. .d8888b. .d8888b. .d8888b. dP 88d888b. .d8888b. 
-88'  `88 88'  `88 88'  `88 88'  `"" 88ooood8 Y8ooooo. Y8ooooo. 88 88'  `88 88'  `88 
-88.  .88 88       88.  .88 88.  ... 88.  ...       88       88 88 88    88 88.  .88 
-88Y888P' dP       `88888P' `88888P' `88888P' `88888P' `88888P' dP dP    dP `8888P88 
-88                                                                              .88 
-dP                                                                          d8888P
-"""
+#   ██╗███╗   ███╗ █████╗  ██████╗ ███████╗
+#   ██║████╗ ████║██╔══██╗██╔════╝ ██╔════╝
+#   ██║██╔████╔██║███████║██║  ███╗█████╗
+#   ██║██║╚██╔╝██║██╔══██║██║   ██║██╔══╝
+#   ██║██║ ╚═╝ ██║██║  ██║╚██████╔╝███████╗
+#   ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝
+#
+#   ██████╗ ██████╗  ██████╗  ██████╗███████╗███████╗███████╗██╗███╗   ██╗ ██████╗
+#   ██╔══██╗██╔══██╗██╔═══██╗██╔════╝██╔════╝██╔════╝██╔════╝██║████╗  ██║██╔════╝
+#   ██████╔╝██████╔╝██║   ██║██║     █████╗  ███████╗███████╗██║██╔██╗ ██║██║  ███╗
+#   ██╔═══╝ ██╔══██╗██║   ██║██║     ██╔══╝  ╚════██║╚════██║██║██║╚██╗██║██║   ██║
+#   ██║     ██║  ██║╚██████╔╝╚██████╗███████╗███████║███████║██║██║ ╚████║╚██████╔╝
+#   ╚═╝     ╚═╝  ╚═╝ ╚═════╝  ╚═════╝╚══════╝╚══════╝╚══════╝╚═╝╚═╝  ╚═══╝ ╚═════╝
 
-def convert_formats(input_file:str, encode_format:str='PNG', resize_percent=None, resize_w_h=(None, None)) -> bool:
+def convert_formats(input_file:str, encode_format:str='PNG', resize_percent=None, resize_w_h=(None, None), encode_to_base64=-False):
     """
     Converts an image file to the specified format (PNG or JPEG).
 
@@ -159,7 +153,9 @@ def convert_formats(input_file:str, encode_format:str='PNG', resize_percent=None
     :type resize_percent:       Percentage amount to scale the image
     :param resize_percent:      in
     :param resize_w_h:          The width and height of the image to be resized
-    :type resize_w_h:           Tuple[int, int] | Tuple[None, None}
+    :type resize_w_h:           Tuple[int, int] | Tuple[None, None]
+    :param encode_to_base64:    Encode the image to base64 - do not write a file
+    :type encode_to_base64:     bool
     """
     jpg_quality = None
 
@@ -183,9 +179,12 @@ def convert_formats(input_file:str, encode_format:str='PNG', resize_percent=None
         elif resize_w_h != (None, None):
             scale = min(resize_w_h[0] / w, resize_w_h[1] / h)
         new_w, new_h = int(w * scale), int(h * scale)
-        print(f'New size will be: {new_w, new_h}')
+        # print(f'New size will be: {new_w, new_h}')
         resized_image = image.resize((new_w, new_h), Image.LANCZOS)
         size_string = f'{new_w}x{new_h}'
+
+    if encode_to_base64:
+        return encode_image_base64( pil_image=resized_image)
 
     path = Path(input_file)
     output_file = path.with_name(path.stem + size_string + '.' + encode_format.lower())
@@ -197,32 +196,29 @@ def convert_formats(input_file:str, encode_format:str='PNG', resize_percent=None
             resized_image.save(output_file)
     else:
         print(f'Warning - file exists, skipping overwrite {output_file}')
+    return None
 
-def encode_image_base64(input_file):
+
+def encode_image_base64(pil_image=None):
     """
-    Encodes a PNG image file into a base64 string.
+    takes either a fjlename or a PIL image.  Image is converted
+    to a base64 encoded PNG
 
-    :param input_file:          The path to the input PNG image file.
-    :type input_file:           str
-    :return:                    The base64 encoded byte string of the image, or None if the file is not a PNG.
-    :rtype:                     bytes or None
+    :param pil_image:      PIL Image object.
+    :type pil_image:       PIL.Image.Image
+    :return:               The base64-encoded PNG bytes of the image.
+    :rtype:                bytes
     """
 
-    if not input_file.lower().endswith('.png'):
-        print('Error - Can only base64 encode PNG files')
-        return None
 
-    image = Image.open(input_file)
-
-    # encode a PNG formatted version of image into BASE64
+    # Always encode as PNG in memory
     with io.BytesIO() as bio:
-        image.save(bio, format='PNG')
+        pil_image.save(bio, format="PNG")
         contents = bio.getvalue()
         encoded = base64.b64encode(contents)
+    display_message(f'B64PNG encoded')
 
-    display_message(f'B64PNG encoded {input_file}')
     return encoded
-
 
 def get_image_size_and_dimensions(filename, as_text=True):
     """
@@ -242,17 +238,20 @@ def get_image_size_and_dimensions(filename, as_text=True):
         return f"{size_kb:.1f} KB - {width} X {height}"
     return size_kb, width, height
 
-"""
-                                                           oo          
-                                                                       
-88d888b. .d8888b. 88d888b. dP    dP 88d888b.    dP  dP  dP dP 88d888b. 
-88'  `88 88'  `88 88'  `88 88    88 88'  `88    88  88  88 88 88'  `88 
-88.  .88 88.  .88 88.  .88 88.  .88 88.  .88    88.88b.88' 88 88    88 
-88Y888P' `88888P' 88Y888P' `88888P' 88Y888P'    8888P Y8P  dP dP    dP 
-88                88                88                                 
-dP                dP                dP
-"""
 
+#   ██████╗  ██████╗ ██████╗ ██╗   ██╗██████╗
+#   ██╔══██╗██╔═══██╗██╔══██╗██║   ██║██╔══██╗
+#   ██████╔╝██║   ██║██████╔╝██║   ██║██████╔╝
+#   ██╔═══╝ ██║   ██║██╔═══╝ ██║   ██║██╔═══╝
+#   ██║     ╚██████╔╝██║     ╚██████╔╝██║
+#   ╚═╝      ╚═════╝ ╚═╝      ╚═════╝ ╚═╝
+#
+#   ██╗    ██╗██╗███╗   ██╗██████╗  ██████╗ ██╗    ██╗███████╗
+#   ██║    ██║██║████╗  ██║██╔══██╗██╔═══██╗██║    ██║██╔════╝
+#   ██║ █╗ ██║██║██╔██╗ ██║██║  ██║██║   ██║██║ █╗ ██║███████╗
+#   ██║███╗██║██║██║╚██╗██║██║  ██║██║   ██║██║███╗██║╚════██║
+#   ╚███╔███╔╝██║██║ ╚████║██████╔╝╚██████╔╝╚███╔███╔╝███████║
+#    ╚══╝╚══╝ ╚═╝╚═╝  ╚═══╝╚═════╝  ╚═════╝  ╚══╝╚══╝ ╚══════╝
 
 def image_popup(filenames:str, location):
     """
@@ -280,9 +279,9 @@ def image_popup(filenames:str, location):
                   [sg.Push(), sg.Frame('', [[sg.Checkbox('Optional resizing', setting=False, font=('default', 14, 'bold'), k='-RESIZE-', p=((20,0),0))],
                   [sg.Input(setting='', justification='r', s=4, k='-RESIZE PERCENT-', p=((20,0),0)), sg.T('%')],
                   [sg.Input(setting='', justification='r', s=4, k='-RESIZE WIDTH-', p=((20,0),0)), sg.T('X'), sg.Input(setting='', justification='r', s=4, k='-RESIZE HEIGHT-',p=0)],
-                                                              [sg.Button('Clear')]], border_width_no_relief=1), sg.Push()]]
+                  [sg.Button('Clear')]], border_width_no_relief=1), sg.Push()]]
 
-        convert_window = MiniWindow('Image actions', layout, location=location, alpha_channel=0)
+        convert_window = MiniWindow('Image actions', layout, location=location, alpha_channel=0, enable_close_attempted_event=True)
         convert_window.refresh()
         convert_window.move(location[0] - convert_window.size[0], location[1] - convert_window.size[1])
         convert_window.set_alpha(1)
@@ -290,25 +289,27 @@ def image_popup(filenames:str, location):
 
         while True:
             event, values = convert_window.read()
-            if event in ('Exit', sg.WIN_CLOSED):
+            if event in ('Exit', sg.WIN_CLOSED, sg.WIN_CLOSE_ATTEMPTED_EVENT):
                 break
             # Perform actions
             if event.startswith('Convert'):
                 image_format = event.split()[-1]                # The image format is always at the end of the button string
                 encode_only = image_format == 'Base64-PNG'      # If is basse64 format, then do a special encode
                 for file in file_list:
-                    if encode_only:
-                        sg.clipboard_set(encode_image_base64(file))
+                    if values['-RESIZE-']:
+                        percent = values['-RESIZE PERCENT-']
+                        percent = None if not percent else int(percent)
+                        width, height = values['-RESIZE WIDTH-'], values['-RESIZE HEIGHT-']
+                        resize_w_h = (int(width), int(height)) if width and height else (None, None)
                     else:
-                        if values['-RESIZE-']:
-                            percent = values['-RESIZE PERCENT-']
-                            percent = None if not percent else int(percent)
-                            width, height = values['-RESIZE WIDTH-'], values['-RESIZE HEIGHT-']
-                            resize_w_h = (int(width), int(height)) if width and height else (None, None)
-                        else:
-                            percent, resize_w_h = None, (None, None)
-                        convert_formats(file, image_format, percent, resize_w_h)
-                        display_message(f'Converted {file} to {image_format}')
+                        percent, resize_w_h = None, (None, None)
+                    if encode_only:
+                        image_format = 'PNG'
+                        # sg.clipboard_set(encode_image_base64(file))
+                    b64_encoded = convert_formats(file, image_format, percent, resize_w_h, encode_to_base64=encode_only)
+                    if encode_only:
+                        sg.clipboard_set(b64_encoded)
+                    display_message(f'Converted {file} to {image_format}')
                 break
             elif event == 'Clear':
                 convert_window['-RESIZE PERCENT-'].update('')
@@ -422,15 +423,13 @@ def display_message(message='')->None:
     sg.popup_quick_message(message, font='_ 10', location=location,  background_color="#ffffe0",text_color='black', auto_close_duration=5)
 
 
-"""
-                    oo          
-                                
-88d8b.d8b. .d8888b. dP 88d888b. 
-88'`88'`88 88'  `88 88 88'  `88 
-88  88  88 88.  .88 88 88    88 
-dP  dP  dP `88888P8 dP dP    dP
+#   ███╗   ███╗ █████╗ ██╗███╗   ██╗
+#   ████╗ ████║██╔══██╗██║████╗  ██║
+#   ██╔████╔██║███████║██║██╔██╗ ██║
+#   ██║╚██╔╝██║██╔══██║██║██║╚██╗██║
+#   ██║ ╚═╝ ██║██║  ██║██║██║ ╚████║
+#   ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝
 
-"""
 def main():
     # sg.theme('dark red')          # try another theme... the mini windows look nice
 
