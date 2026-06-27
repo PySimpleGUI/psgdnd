@@ -2,7 +2,7 @@ import base64
 import io
 import os
 import webbrowser
-from typing import Tuple, Union, List, Any
+from typing import Tuple, Union, List, Any, Dict
 
 from PIL import Image
 import PySimpleGUI as sg
@@ -54,7 +54,7 @@ Copyright 2026 PySimpleGUI. All rights reserved.
 """
 
 
-version = '6.2.3'
+version = '6.2.4'
 __version__ = version.split()[0]
 
 """
@@ -69,17 +69,14 @@ Changelog since last major release
                         Show the image size and dimensions along with filename
 6.2.3   25-Jun-2026     Added ability to both convert to base64 PNG and resize the image (first)
                         Better settings save by adding close attempted events to the window so that there are values to save
-                        New brighter figlets                        
+                        New brighter figlets          
+6.2.4   27-Jun-2026     Change how popup MiniWindows are created. Using the new Window-Anchoring fearures added to PSG 6.2.8   
+                        Added anchoring to settings so users can easily change them
+                        Added more typedefs
+                        Added globals class for the global settings... global state without global variables 🙂
+                        Changed the pip install option to get the latest from GitHub rather than PyPI since Window Anchorings isn't on PyPI
 """
 
-
-
-#   ███████╗███████╗████████╗████████╗██╗███╗   ██╗ ██████╗ ███████╗
-#   ██╔════╝██╔════╝╚══██╔══╝╚══██╔══╝██║████╗  ██║██╔════╝ ██╔════╝
-#   ███████╗█████╗     ██║      ██║   ██║██╔██╗ ██║██║  ███╗███████╗
-#   ╚════██║██╔══╝     ██║      ██║   ██║██║╚██╗██║██║   ██║╚════██║
-#   ███████║███████╗   ██║      ██║   ██║██║ ╚████║╚██████╔╝███████║
-#   ╚══════╝╚══════╝   ╚═╝      ╚═╝   ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝
 
 # ---------- CONSTANTS ----------
 KEY_REMOVABLE_FOLDER = '-REMOVABLE FOLDER-'
@@ -90,12 +87,42 @@ KEY_PNG_ICON_BASE64 = '-ICON-BASE64-'
 
 DEFAULT_JPG_QUALITY = 95
 
-def show_settings_window(location:Tuple[int, int]):
+# Definitions of anchoring when showing a MiniWindow popup
+# Default is currently to show the MiniWindow popup with lower right corner of the window being
+#   placed at the upper left corner of the Drop Icon
+# First define the anchor point ON the ICON that the MiniWindow will be created
+DEFAULT_ICON_POPUP_ANCHOR = 'Upper Left'    # Where on the drop icon should windows be anchored
+# Then define the anchor point ON the MINIWINDOW
+DEFAULT_POPUP_ANCHOR = 'Lower Right'        # The location on the window to anchor when creating
+
+anchor_choices = {'Center': sg.WIN_ANCHOR_CENTER, 'Upper Left': sg.WIN_ANCHOR_UPPER_LEFT, 'Upper Right': sg.WIN_ANCHOR_UPPER_RIGHT,
+                  'Lower Left': sg.WIN_ANCHOR_LOWER_LEFT, 'Lower Right': sg.WIN_ANCHOR_LOWER_RIGHT}
+
+# ------------------------------- GLOBALS -------------------------------
+class G:
+    # Current anchor settings that will be used when creating MiniWindows
+    icon_popup_anchor: str = anchor_choices[sg.user_settings_get_entry('-ICON ANCHOR-', DEFAULT_ICON_POPUP_ANCHOR)]
+    popup_anchor: str = anchor_choices[sg.user_settings_get_entry('-WINDOW ANCHOR-', DEFAULT_POPUP_ANCHOR)]
+
+
+
+#   ███████╗███████╗████████╗████████╗██╗███╗   ██╗ ██████╗ ███████╗
+#   ██╔════╝██╔════╝╚══██╔══╝╚══██╔══╝██║████╗  ██║██╔════╝ ██╔════╝
+#   ███████╗█████╗     ██║      ██║   ██║██╔██╗ ██║██║  ███╗███████╗
+#   ╚════██║██╔══╝     ██║      ██║   ██║██║╚██╗██║██║   ██║╚════██║
+#   ███████║███████╗   ██║      ██║   ██║██║ ╚████║╚██████╔╝███████║
+#   ╚══════╝╚══════╝   ╚═╝      ╚═╝   ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝
+
+
+
+def show_settings_window(location:Tuple[int, int], location_anchor=None):
     """
     Shows the settings window
 
     :param location:        Location of the icon window
     :type location:         Tuple[int, int]
+    :param location_anchor: What part of the window should be anchored at the location
+    :type location_anchor:  str
     """
 
     layout = [[sg.T('Drag and Drop Icon Settings', font='_ 15')],
@@ -103,25 +130,29 @@ def show_settings_window(location:Tuple[int, int]):
               [sg.Input(setting=10, justification='r', s=3, k=KEY_ALPHA), sg.T('Alpha channel for icon (1-10)')],
               [sg.Input(setting='', justification='r', s=40, k=KEY_PNG_ICON_FILENAME), sg.T('Icon filename')],
               [sg.Input(setting='', justification='r', s=40, k=KEY_PNG_ICON_BASE64), sg.T('Icon Base64')],
+              [sg.Frame('Popup Anchoring',
+                        [[sg.T('Location on Icon to anchor popups'), sg.Combo(values=list(anchor_choices.keys()), k='-ICON ANCHOR-', setting=DEFAULT_ICON_POPUP_ANCHOR, size=(10,5), readonly=True)],
+                            [sg.T('Location on popup Window to anchor to icon'), sg.Combo(values=list(anchor_choices.keys()), k='-WINDOW ANCHOR-', setting=DEFAULT_POPUP_ANCHOR, size=(10,5), readonly=True)]])],
               [sg.T('Versions',font=('default', 14, 'bold'), p=0)],
               [sg.T(f'{version:6} this program', p=0)],
               [sg.T(f'{dnd.version:6} psgdnd', p=0)],
               [sg.T(f'{sg.version:6} PySimpleGUI', p=0)],
               [sg.Push(), sg.OK(), sg.Cancel()]]
 
-    window = MiniWindow('Settings', layout, location=location, alpha_channel=0)
+    window = MiniWindow('Settings', layout, location=location, location_anchor=G.popup_anchor)
+
     window.settings_restore()
-    window.refresh()
-    window.move(location[0]-window.size[0]-10, location[1]-window.size[1])
-    window.set_alpha(1)
+
     while True:
-        event, values = window.read()
+        event, values  = window.read()          # type: Any, Dict
         if event in (sg.WIN_CLOSED, 'Cancel', 'Exit'):
             break
         elif event == 'OK':
             if values[KEY_PNG_ICON_BASE64].startswith(("b'", 'b"')):        # if the bytestring included quotes, strip off the quotes
                 values[KEY_PNG_ICON_BASE64] = values[KEY_PNG_ICON_BASE64][2:-1]    # remove 2 chars from the front, 1 from the end
             window.settings_save(values)
+            G.icon_popup_anchor = anchor_choices[values.get('-ICON ANCHOR-', DEFAULT_ICON_POPUP_ANCHOR)]
+            G.popup_anchor = anchor_choices[values.get('-WINDOW ANCHOR-', DEFAULT_POPUP_ANCHOR)]
             break
     window.close()
 
@@ -253,23 +284,28 @@ def get_image_size_and_dimensions(filename, as_text=True):
 #   ╚███╔███╔╝██║██║ ╚████║██████╔╝╚██████╔╝╚███╔███╔╝███████║
 #    ╚══╝╚══╝ ╚═╝╚═╝  ╚═══╝╚═════╝  ╚═════╝  ╚══╝╚══╝ ╚══════╝
 
-def image_popup(filenames:str, location):
+
+
+
+def image_popup(filenames:str, location, location_anchor=None):
     """
       Displays a popup window with options for the dropped files.  Performs chosen operation.
 
       If image files are dropped, options to convert to JPG, PNG, or Base64 PNG are shown.d
       For other file types, a list of the dropped files is displayed.
 
-      :param filenames:         A comma-separated string of the dropped file paths.
-      :type filenames:          str
-      :param location:          The (x, y) coordinates of the icon window
-      :type location:           Tuple[int, int] | Tuple[None, None]
+    :param filenames:       A comma-separated string of the dropped file paths.
+    :type filenames:        str
+    :param location:        The (x, y) coordinates of the icon window
+    :type location:         Tuple[int, int] | Tuple[None, None]
+    :param location_anchor: What part of the window should be anchored at the location
+    :type location_anchor:  str
     """
     file_list = filenames.split(',')
     # if len(file_list) == 1:                 # If single item, see if it's a flash drive for photos
     #     sg.popup(f'Single file = {file_list[0]}')
     actions = ('Convert to JPG', 'Convert to PNG', 'Convert to GIF', 'Convert to ICO',  'Convert to WEBP','Convert to Base64-PNG', 'Cancel')
-    image_files = all(file.endswith(('jpeg', 'jpg', 'png', 'gif', 'ico', 'webp')) for file in file_list)
+    image_files = all(file.lower().endswith(('jpeg', 'jpg', 'png', 'gif', 'ico', 'webp')) for file in file_list)
     if image_files:
         button_size = max(len(a) for a in actions)
         layout = [[sg.Text('Images dropped - What do you want to do with them?')],
@@ -281,15 +317,12 @@ def image_popup(filenames:str, location):
                   [sg.Input(setting='', justification='r', s=4, k='-RESIZE WIDTH-', p=((20,0),0)), sg.T('X'), sg.Input(setting='', justification='r', s=4, k='-RESIZE HEIGHT-',p=0)],
                   [sg.Button('Clear')]], border_width_no_relief=1), sg.Push()]]
 
-        convert_window = MiniWindow('Image actions', layout, location=location, alpha_channel=0, enable_close_attempted_event=True)
-        convert_window.refresh()
-        convert_window.move(location[0] - convert_window.size[0], location[1] - convert_window.size[1])
-        convert_window.set_alpha(1)
+        convert_window = MiniWindow('Image actions', layout, location=location, enable_close_attempted_event=True,  location_anchor=G.popup_anchor if location_anchor is None else location_anchor)
         convert_window.settings_restore()
 
         while True:
             event, values = convert_window.read()
-            if event in ('Exit', sg.WIN_CLOSED, sg.WIN_CLOSE_ATTEMPTED_EVENT):
+            if event in ('Exit', 'Cancel', sg.WIN_CLOSED, sg.WIN_CLOSE_ATTEMPTED_EVENT):
                 break
             # Perform actions
             if event.startswith('Convert'):
@@ -323,21 +356,22 @@ def image_popup(filenames:str, location):
         for file in file_list:
             layout.append([sg.Text(file, p=(10,0))])
         layout.append([sg.Push(), sg.Ok()])
-        window = MiniWindow('Files Dropped', layout, location=location)
+        window = MiniWindow('Files Dropped', layout, location=location,  location_anchor= location_anchor if location_anchor else G.popup_anchor)
         window.refresh()
-        window.move(location[0] - window.size[0], location[1] - window.size[1])
         event, values = window.read(close=True)
 
         # sg.popup(f'Dropped files:', '\n'.join(file_list), non_blocking=True, line_width=max(len(f)+1 for f in file_list), location=location, no_titlebar=True)
 
-def text_popup(text:str, location):
+def text_popup(text:str, location, location_anchor=None):
     """
-      Displays a popup window with options for dropped text.  Performs chosen operation.
+    Displays a popup window with options for dropped text.  Performs chosen operation.
 
-      :param text:              The text dropped onto the icon
-      :type text:               str
-      :param location:          The (x, y) coordinates of the icon window.  Will want to show the popup offset from this location
-      :type location:           Tuple[int, int] | Tuple[None, None]
+    :param text:            The text dropped onto the icon
+    :type text:             str
+    :param location:        The (x, y) coordinates of the icon window.  Will want to show the popup offset from this location
+    :type location:         Tuple[int, int] | Tuple[None, None]
+    :param location_anchor: What part of the window should be anchored at the location
+    :type location_anchor:  str
     """
     actions = ('Translate to English', 'Translate to Spanish',  'Cancel')
     lang_to_dest = {'Spanish' : 'es', 'English' : 'en'}
@@ -345,10 +379,7 @@ def text_popup(text:str, location):
     layout = [[sg.Text('Text dropped - What do you want to do with it?')],
               [sg.Text('' if translate_installed else '* NOTE * Unable to use translate features. You need to install googletrans: pip install googletrans==3.1.0a0')],
               [sg.Column([[sg.Button(action, s=button_size, )] for action in actions], justification='c')]]
-    convert_window = MiniWindow('Text actions', layout, location=location, alpha_channel=0)
-    convert_window.refresh()
-    convert_window.move(location[0] - convert_window.size[0], location[1] - convert_window.size[1])
-    convert_window.set_alpha(1)
+    convert_window = MiniWindow('Text actions', layout, location=location,  location_anchor=location_anchor if location_anchor  else G.popup_anchor)
     event, values = convert_window.read(close=True)
     # Perform actions
     if event.startswith('Translate'):
@@ -366,7 +397,7 @@ def text_popup(text:str, location):
 
 def wrap_in_border(title: str, layout_rows: list, close_key: Any = 'Exit') -> list:
     """
-      Wraps a Window Layout with a mini window outline with a titlebar and close button
+    Wraps a Window Layout with a mini window outline with a titlebar and close button
 
         ┌──────────────────────────┐
         │ ▌  Title              ✕  │
@@ -393,7 +424,7 @@ def wrap_in_border(title: str, layout_rows: list, close_key: Any = 'Exit') -> li
     return [[sg.Frame("", layout, border_width_no_relief=1, p=0, expand_x=True, expand_y=True)]]
 
 
-def MiniWindow(title: str, layout: List, **kwargs) -> sg.Window:
+def MiniWindow(title: str, layout: List, **kwargs: Any) -> sg.Window:
     """
     A function that returns a Window object. The snake case MiniWindow name means we're acting like an object. An object is returned so the use won't notice
     :param title:       Title for the window titlebar
@@ -436,7 +467,7 @@ def main():
     # get settings from settings file
     b64icon = sg.user_settings_get_entry(KEY_PNG_ICON_BASE64, None)
     pngicon = sg.user_settings_get_entry(KEY_PNG_ICON_FILENAME, None)
-    keep_on_top = sg.user_settings_get_entry('-keep on top-', False)
+    keep_on_top = sg.user_settings_get_entry('-keep on top-', True)
     try:
         alpha = int(sg.user_settings_get_entry(KEY_ALPHA, 10))/10
     except:
@@ -450,6 +481,7 @@ def main():
         icon = sg.EMOJI_BASE64_COOL
 
     #------- GUI definition & setup --------#
+
 
     RIGHT_CLICK_MENU = ['', ['Settings', f'Keep on top is {"ON" if keep_on_top else "OFF"}', 'Edit Me', 'Version', 'Exit']]
     layout = [[sg.Image(source=icon, key='-IMAGE-', p=0, background_color='black', enable_events=True)]]
@@ -472,16 +504,14 @@ def main():
         if dnd.is_drop_event(event):                            # Drag and Drop event
             dnd_event: dnd.DropEvent = event
             if dnd_event.drop_type == dnd.DROP_TYPE_FILES:      # If files are dropped, show a window with choices of what to do with them
-                image_popup(values[event], window.current_location())
+                image_popup(values[event], window.current_location(use_anchor=G.icon_popup_anchor))
             elif dnd_event.drop_type == dnd.DROP_TYPE_TEXT:      # If files are dropped, show a window with choices of what to do with them
-                text_popup(values[event], window.current_location())
+                text_popup(values[event], window.current_location(use_anchor=G.icon_popup_anchor))
         if event == '-IMAGE-+DOUBLE_CLICK+':                    # Add your double-click action here... such as launching another program
-            loc = window.current_location()
-            loc = (loc[0]-40, loc[1]-50)
             webbrowser.open(r'https://github.PySimpleGUI.com')
         elif event == 'Settings':
             display_message('Opening settings')
-            show_settings_window(window.current_location())
+            show_settings_window(window.current_location(use_anchor=G.icon_popup_anchor))
         elif event in ('Keep on top is OFF', 'Keep on top is ON'):          # Keep on top right click menu
             window.keep_on_top_set() if event.endswith('OFF') else window.keep_on_top_clear()
             RIGHT_CLICK_MENU[1][1] = f'Keep on top is {"ON" if event.endswith("OFF") else "OFF"}'
@@ -495,9 +525,9 @@ def main():
     window.close()
 
 if __name__ == '__main__':
-    if Version(sg.version) < Version("6.2"):
-        if sg.popup_yes_no('PySimpleGUI version error', 'PySimpleGUI version 6.2 or greater is required to run this program.', 'To pip install it, execute the command:', r'python -m pip install --upgrade PySimpleGUI', 'Would you like to install this version now?') == 'Yes':
-            sg.execute_pip_install_package(r'PySimpleGUI')
+    if Version(sg.version) < Version("6.2.8"):
+        if sg.popup_yes_no(f'ERROR - PySimpleGUI version is {sg.version}', 'PySimpleGUI version 6.2.8 or greater is required to run this program.', 'To pip install it, execute the command:', r'python -m pip install --upgrade https://github.com/PySimpleGUI/PySimpleGUI/zipball/master', 'Would you like to upgrade to latest from GitHub?', line_width=100) == 'Yes':
+            sg.execute_pip_install_package(r'https://github.com/PySimpleGUI/PySimpleGUI/zipball/master')
             sg.popup_auto_close('Please restart the application to use the newly installed PySimpleGUI package.', auto_close_duration=3)
             exit()
         else:
