@@ -18,39 +18,39 @@ except:
     translate_installed = False
 
 """
-
-Creates what appears to be an icon on your desktop, but is in reality a PySimpleGUI program.
-
-NOTE - You need to use  PySimpleGUI version 6.2 with this program.  6.2 has the ability to set any color of border for Frame elements
-
-Ways to interface with the icon include:
-* Right click menu
-* Double click of icon
-* Dropping files onto icon
-* Dropping text onto icon
-
-Features:
-* Settings window that includes:
-    - JPG quality level
-    - Alpha channel setting for the icon (creates a dimmed effect)
-    - Icon filename and Base64Png - can specify the icon through the settings rather than changing the code
-* When JPG, PNG, GIF, ICO images are dropped onto icon, a popup window of options is shown.
-    - Images can be converted to PNG, JPG, GIF, ICO
-    - An image can be converted to base64 encoded PNG. The result is put onto clipboard
-* If the icon is double clicked, it opens the PySimpleGUI github page
-* When other file types is dropped onto icon, a popup is shown with the list of files
-* When text is dropped onto the icon, a popup of text options is displayed.  You can
-    - Translate text into English and put on clipboard
-    - Translate text into Spanish and put on clipboard
-* Toggle keep on top using right click menu
-* Shows various dialog using a mini-window that's designed into this application
-
-Requires:
-    PIL for image format conversion
-    Google Translate to translate text.  To install run:
-        pip install googletrans==3.1.0a0
-
-Copyright 2026 PySimpleGUI. All rights reserved.
+    
+    Creates what appears to be an icon on your desktop, but is in reality a PySimpleGUI program.
+    
+    NOTE - You need to use  PySimpleGUI version 6.2 with this program.  6.2 has the ability to set any color of border for Frame elements
+    
+    Ways to interface with the icon include:
+    * Right click menu
+    * Double click of icon
+    * Dropping files onto icon
+    * Dropping text onto icon
+    
+    Features:
+    * Settings window that includes:
+        - JPG quality level
+        - Alpha channel setting for the icon (creates a dimmed effect)
+        - Icon filename and Base64Png - can specify the icon through the settings rather than changing the code
+    * When JPG, PNG, GIF, ICO images are dropped onto icon, a popup window of options is shown.
+        - Images can be converted to PNG, JPG, GIF, ICO
+        - An image can be converted to base64 encoded PNG. The result is put onto clipboard
+    * If the icon is double clicked, it opens the PySimpleGUI github page
+    * When other file types is dropped onto icon, a popup is shown with the list of files
+    * When text is dropped onto the icon, a popup of text options is displayed.  You can
+        - Translate text into English and put on clipboard
+        - Translate text into Spanish and put on clipboard
+    * Toggle keep on top using right click menu
+    * Shows various dialog using a mini-window that's designed into this application
+    
+    Requires:
+        PIL for image format conversion
+        Google Translate to translate text.  To install run:
+            pip install googletrans==3.1.0a0
+    
+    Copyright 2026 PySimpleGUI. All rights reserved.
 """
 
 
@@ -395,6 +395,32 @@ def text_popup(text:str, location, location_anchor=None):
         # sg.popup(f'Dropped files:', '\n'.join(file_list), non_blocking=True, line_width=max(len(f)+1 for f in file_list), location=location, no_titlebar=True)
 
 
+
+#   ███╗   ███╗██╗███╗   ██╗██╗    ██╗    ██╗██╗███╗   ██╗██████╗  ██████╗ ██╗    ██╗
+#   ████╗ ████║██║████╗  ██║██║    ██║    ██║██║████╗  ██║██╔══██╗██╔═══██╗██║    ██║
+#   ██╔████╔██║██║██╔██╗ ██║██║    ██║ █╗ ██║██║██╔██╗ ██║██║  ██║██║   ██║██║ █╗ ██║
+#   ██║╚██╔╝██║██║██║╚██╗██║██║    ██║███╗██║██║██║╚██╗██║██║  ██║██║   ██║██║███╗██║
+#   ██║ ╚═╝ ██║██║██║ ╚████║██║    ╚███╔███╔╝██║██║ ╚████║██████╔╝╚██████╔╝╚███╔███╔╝
+#   ╚═╝     ╚═╝╚═╝╚═╝  ╚═══╝╚═╝     ╚══╝╚══╝ ╚═╝╚═╝  ╚═══╝╚═════╝  ╚═════╝  ╚══╝╚══╝
+
+def MiniWindow(title: str, layout: List, **kwargs: Any) -> sg.Window:
+    """
+    A function that returns a Window object. The snake case MiniWindow name means we're acting like an object. An object is returned so the use won't notice
+    :param title:       Title for the window titlebar
+    :type title:        str
+    :param layout:      The window layout
+    :type layout:       List[List[sg.Element]]
+    :param kwargs:      The normal Window arguments that a user is using to create the window
+    :type kwargs:       Any
+    :return:            A Window object that's a mini window with no titlebar
+    :rtype:             sg.Window
+    """
+    # first embed the supplied layout into a layout that has a fake titlebar and frame used to draw the border
+    layout = wrap_in_border(title, layout)
+    return sg.Window(title, layout, no_titlebar=True, grab_anywhere=True, keep_on_top=True, finalize=True, margins=(0, 0), **kwargs)
+
+
+
 def wrap_in_border(title: str, layout_rows: list, close_key: Any = 'Exit') -> list:
     """
     Wraps a Window Layout with a mini window outline with a titlebar and close button
@@ -422,23 +448,6 @@ def wrap_in_border(title: str, layout_rows: list, close_key: Any = 'Exit') -> li
               [sg.HorizontalSeparator(color=sg.theme_text_color(),  pad=(0, 0))],
               *layout_rows]
     return [[sg.Frame("", layout, border_width_no_relief=1, p=0, expand_x=True, expand_y=True)]]
-
-
-def MiniWindow(title: str, layout: List, **kwargs: Any) -> sg.Window:
-    """
-    A function that returns a Window object. The snake case MiniWindow name means we're acting like an object. An object is returned so the use won't notice
-    :param title:       Title for the window titlebar
-    :type title:        str
-    :param layout:      The window layout
-    :type layout:       List[List[sg.Element]]
-    :param kwargs:      The normal Window arguments that a user is using to create the window
-    :type kwargs:       dict
-    :return:            A Window object that's a mini window with no titlebar
-    :rtype:             sg.Window
-    """
-    # first embed the supplied layout into a layout that has a fake titlebar and frame used to draw the border
-    layout = wrap_in_border(title, layout)
-    return sg.Window(title, layout, no_titlebar=True, grab_anywhere=True, keep_on_top=True, finalize=True, margins=(0, 0), **kwargs)
 
 
 
