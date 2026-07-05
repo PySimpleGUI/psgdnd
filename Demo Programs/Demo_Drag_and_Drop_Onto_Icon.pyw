@@ -1,8 +1,16 @@
 import base64
 import io
 import os
-import webbrowser
 from typing import Tuple, Union, List, Any, Dict
+
+
+try:
+    import tinify
+    tinify_available = True
+except:
+    tinify_available = False
+    print('Tinify is not available.  Run "pip install tinify" if you want to use tinify.')
+
 
 from PIL import Image
 import PySimpleGUI as sg
@@ -54,7 +62,7 @@ except:
 """
 
 
-version = '6.2.4'
+version = '6.2.5'
 __version__ = version.split()[0]
 
 """
@@ -75,6 +83,9 @@ Changelog since last major release
                         Added more typedefs
                         Added globals class for the global settings... global state without global variables 🙂
                         Changed the pip install option to get the latest from GitHub rather than PyPI since Window Anchorings isn't on PyPI
+6.2.5    5-Jul-2026     Added double-click action to take to settings 
+                        Added tinifying PNG files.  Used when converting to a PNG file or encoding the base64 PNG. User needs a (free) API key
+                        Added base64 mouseover image to the settings.  Mouseover will easily show the desktop icon isn't really an icon but an application.
 """
 
 
@@ -84,6 +95,11 @@ KEY_JPG_QUALITY = '-JPG QUALITY-'
 KEY_ALPHA = '-ALPHA-'
 KEY_PNG_ICON_FILENAME= '-ICON-'
 KEY_PNG_ICON_BASE64 = '-ICON-BASE64-'
+KEY_PNG_MOUSEOVER_ICON_BASE64 = '-MOUSEOVER-ICON-BASE64-'
+KEY_DOUBLE_CLICK_COMMAND = '-DOUBLE CLICK-'
+KEY_TINIFY_API_KEY = '-TINIFY KEY-'
+KEY_ICON_ANCHOR = '-ICON ANCHOR-'
+KEY_WINDOW_ANCHOR = '-WINDOW ANCHOR-'
 
 DEFAULT_JPG_QUALITY = 95
 
@@ -103,7 +119,8 @@ class G:
     # Current anchor settings that will be used when creating MiniWindows
     icon_popup_anchor: str = anchor_choices[sg.user_settings_get_entry('-ICON ANCHOR-', DEFAULT_ICON_POPUP_ANCHOR)]
     popup_anchor: str = anchor_choices[sg.user_settings_get_entry('-WINDOW ANCHOR-', DEFAULT_POPUP_ANCHOR)]
-
+    tinify_api_key: str = None
+    mouseover_icon:bytes = None
 
 
 #   ███████╗███████╗████████╗████████╗██╗███╗   ██╗ ██████╗ ███████╗
@@ -130,9 +147,12 @@ def show_settings_window(location:Tuple[int, int], location_anchor=None):
               [sg.Input(setting=10, justification='r', s=3, k=KEY_ALPHA), sg.T('Alpha channel for icon (1-10)')],
               [sg.Input(setting='', justification='r', s=40, k=KEY_PNG_ICON_FILENAME), sg.T('Icon filename')],
               [sg.Input(setting='', justification='r', s=40, k=KEY_PNG_ICON_BASE64), sg.T('Icon Base64')],
+              [sg.Input(setting='', justification='r', s=40, k=KEY_PNG_MOUSEOVER_ICON_BASE64), sg.T('Mouseover Icon Base64')],
+              [sg.Input(setting='', justification='r', s=40, k=KEY_DOUBLE_CLICK_COMMAND), sg.T('Double-Click action')],
+              [sg.Input(setting='', justification='r', s=40, k=KEY_TINIFY_API_KEY), sg.T('Tinify API key')],
               [sg.Frame('Popup Anchoring',
-                        [[sg.T('Location on Icon to anchor popups'), sg.Combo(values=list(anchor_choices.keys()), k='-ICON ANCHOR-', setting=DEFAULT_ICON_POPUP_ANCHOR, size=(10,5), readonly=True)],
-                            [sg.T('Location on popup Window to anchor to icon'), sg.Combo(values=list(anchor_choices.keys()), k='-WINDOW ANCHOR-', setting=DEFAULT_POPUP_ANCHOR, size=(10,5), readonly=True)]])],
+                        [[sg.T('Location on Icon to anchor popups'), sg.Combo(values=list(anchor_choices.keys()), k=KEY_ICON_ANCHOR, setting=DEFAULT_ICON_POPUP_ANCHOR, size=(10,5), readonly=True)],
+                            [sg.T('Location on popup Window to anchor to icon'), sg.Combo(values=list(anchor_choices.keys()), k=KEY_WINDOW_ANCHOR, setting=DEFAULT_POPUP_ANCHOR, size=(10,5), readonly=True)]])],
               [sg.T('Versions',font=('default', 14, 'bold'), p=0)],
               [sg.T(f'{version:6} this program', p=0)],
               [sg.T(f'{dnd.version:6} psgdnd', p=0)],
@@ -150,9 +170,20 @@ def show_settings_window(location:Tuple[int, int], location_anchor=None):
         elif event == 'OK':
             if values[KEY_PNG_ICON_BASE64].startswith(("b'", 'b"')):        # if the bytestring included quotes, strip off the quotes
                 values[KEY_PNG_ICON_BASE64] = values[KEY_PNG_ICON_BASE64][2:-1]    # remove 2 chars from the front, 1 from the end
+            if values[KEY_PNG_MOUSEOVER_ICON_BASE64].startswith(("b'", 'b"')):        # if the bytestring included quotes, strip off the quotes
+                values[KEY_PNG_MOUSEOVER_ICON_BASE64] = values[KEY_PNG_MOUSEOVER_ICON_BASE64][2:-1]    # remove 2 chars from the front, 1 from the end
+
+            if values[KEY_PNG_MOUSEOVER_ICON_BASE64]:
+                G.mouseover_icon = bytes(values[KEY_PNG_MOUSEOVER_ICON_BASE64], 'utf-8')
+            else:
+                G.mouseover_icon = None
             window.settings_save(values)
-            G.icon_popup_anchor = anchor_choices[values.get('-ICON ANCHOR-', DEFAULT_ICON_POPUP_ANCHOR)]
-            G.popup_anchor = anchor_choices[values.get('-WINDOW ANCHOR-', DEFAULT_POPUP_ANCHOR)]
+            G.icon_popup_anchor = anchor_choices[values.get(KEY_ICON_ANCHOR, DEFAULT_ICON_POPUP_ANCHOR)]
+            G.popup_anchor = anchor_choices[values.get(KEY_WINDOW_ANCHOR, DEFAULT_POPUP_ANCHOR)]
+            G.tinify_api_key = values[KEY_TINIFY_API_KEY]
+
+            if tinify_available:
+                tinify.key =  G.tinify_api_key
             break
     window.close()
 
@@ -173,7 +204,7 @@ def show_settings_window(location:Tuple[int, int], location_anchor=None):
 #   ██║     ██║  ██║╚██████╔╝╚██████╗███████╗███████║███████║██║██║ ╚████║╚██████╔╝
 #   ╚═╝     ╚═╝  ╚═╝ ╚═════╝  ╚═════╝╚══════╝╚══════╝╚══════╝╚═╝╚═╝  ╚═══╝ ╚═════╝
 
-def convert_formats(input_file:str, encode_format:str='PNG', resize_percent=None, resize_w_h=(None, None), encode_to_base64=-False):
+def convert_formats(input_file:str, encode_format:str='PNG', resize_percent=None, resize_w_h=(None, None), encode_to_base64=-False, tinify=False):
     """
     Converts an image file to the specified format (PNG or JPEG).
 
@@ -187,6 +218,8 @@ def convert_formats(input_file:str, encode_format:str='PNG', resize_percent=None
     :type resize_w_h:           Tuple[int, int] | Tuple[None, None]
     :param encode_to_base64:    Encode the image to base64 - do not write a file
     :type encode_to_base64:     bool
+    :param tinify:              If True, tinify PNG files
+    :type tinify:                bool
     """
     jpg_quality = None
 
@@ -214,6 +247,10 @@ def convert_formats(input_file:str, encode_format:str='PNG', resize_percent=None
         resized_image = image.resize((new_w, new_h), Image.LANCZOS)
         size_string = f'{new_w}x{new_h}'
 
+    if tinify and tinify_available:
+        resized_image = tinify_pil_image(resized_image)
+        size_string += '_tinify'
+
     if encode_to_base64:
         return encode_image_base64( pil_image=resized_image)
 
@@ -225,9 +262,32 @@ def convert_formats(input_file:str, encode_format:str='PNG', resize_percent=None
             resized_image.save(output_file, quality=jpg_quality)
         else:
             resized_image.save(output_file)
+        display_message(f'Converted {input_file} to {encode_format}')
+
     else:
-        print(f'Warning - file exists, skipping overwrite {output_file}')
+        display_message(f'Skipping overwrite {output_file}')
     return None
+
+
+def tinify_pil_image(img: Image.Image) -> Image.Image:
+    # 1) PIL Image -> PNG bytes in memory
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    png_bytes = buf.getvalue()
+
+    # 2) Send bytes to Tinify
+    result = tinify.from_buffer(png_bytes)  # compress buffer [web:59][web:77]
+
+    # 3) Get compressed bytes back
+    compressed_bytes = result.to_buffer()   # returns PNG/JPEG bytes [web:77][web:81]
+
+    # 4) Turn bytes back into a Pillow Image
+    out_buf = io.BytesIO(compressed_bytes)
+    compressed_img = Image.open(out_buf)
+    compressed_img.load()  # force load from buffer
+
+
+    return compressed_img
 
 
 def encode_image_base64(pil_image=None):
@@ -312,6 +372,7 @@ def image_popup(filenames:str, location, location_anchor=None):
                   [[sg.Text(f'{get_image_size_and_dimensions(file)} - {file}', p=0)] for file in file_list],
                   # [sg.Text('\n'.join(file_list))],
                   [sg.Column([[sg.Button(action, s=button_size, )] for action in actions], justification='c')],
+                  [sg.P(), sg.Checkbox('Tinify PNGs', setting=False,  k='-TINIFY-', p=((20,0),0)), sg.P()] if tinify_available else [],
                   [sg.Push(), sg.Frame('', [[sg.Checkbox('Optional resizing', setting=False, font=('default', 14, 'bold'), k='-RESIZE-', p=((20,0),0))],
                   [sg.Input(setting='', justification='r', s=4, k='-RESIZE PERCENT-', p=((20,0),0)), sg.T('%')],
                   [sg.Input(setting='', justification='r', s=4, k='-RESIZE WIDTH-', p=((20,0),0)), sg.T('X'), sg.Input(setting='', justification='r', s=4, k='-RESIZE HEIGHT-',p=0)],
@@ -339,10 +400,9 @@ def image_popup(filenames:str, location, location_anchor=None):
                     if encode_only:
                         image_format = 'PNG'
                         # sg.clipboard_set(encode_image_base64(file))
-                    b64_encoded = convert_formats(file, image_format, percent, resize_w_h, encode_to_base64=encode_only)
+                    b64_encoded = convert_formats(file, image_format, percent, resize_w_h, encode_to_base64=encode_only, tinify=values.get('-TINIFY-', False))
                     if encode_only:
                         sg.clipboard_set(b64_encoded)
-                    display_message(f'Converted {file} to {image_format}')
                 break
             elif event == 'Clear':
                 convert_window['-RESIZE PERCENT-'].update('')
@@ -477,6 +537,7 @@ def main():
     b64icon = sg.user_settings_get_entry(KEY_PNG_ICON_BASE64, None)
     pngicon = sg.user_settings_get_entry(KEY_PNG_ICON_FILENAME, None)
     keep_on_top = sg.user_settings_get_entry('-keep on top-', True)
+    mouseover_icon = sg.user_settings_get_entry(KEY_PNG_MOUSEOVER_ICON_BASE64, None)
     try:
         alpha = int(sg.user_settings_get_entry(KEY_ALPHA, 10))/10
     except:
@@ -489,11 +550,21 @@ def main():
     else:
         icon = sg.EMOJI_BASE64_COOL
 
+    if mouseover_icon:
+        G.mouseover_icon = bytes(mouseover_icon, 'utf-8')
+
+    if tinify_available:
+        G.tinify_api_key = sg.user_settings_get_entry(KEY_TINIFY_API_KEY, None)
+        tinify.key = G.tinify_api_key
+
+
+
     #------- GUI definition & setup --------#
 
 
     RIGHT_CLICK_MENU = ['', ['Settings', f'Keep on top is {"ON" if keep_on_top else "OFF"}', 'Edit Me', 'Version', 'Exit']]
-    layout = [[sg.Image(source=icon, key='-IMAGE-', p=0, background_color='black', enable_events=True)]]
+    # layout = [[sg.Button(image_source=icon, key='-IMAGE-', p=0, button_color='black', border_width=0, mouseover_image_source=G.mouseover_icon)]]
+    layout = [[sg.Image(source=icon, key='-IMAGE-', p=0, background_color='black', enable_events=True, mouseover_image_source=G.mouseover_icon)]]
 
     window = sg.Window('Desktop Icon Demo', layout, element_justification='center', resizable=True, no_titlebar=True, right_click_menu=RIGHT_CLICK_MENU, margins=(0,0), grab_anywhere=True, auto_save_location=True, keep_on_top=keep_on_top,  finalize=True, alpha_channel=alpha)
 
@@ -517,25 +588,32 @@ def main():
             elif dnd_event.drop_type == dnd.DROP_TYPE_TEXT:      # If files are dropped, show a window with choices of what to do with them
                 text_popup(values[event], window.current_location(use_anchor=G.icon_popup_anchor))
         if event == '-IMAGE-+DOUBLE_CLICK+':                    # Add your double-click action here... such as launching another program
-            webbrowser.open(r'https://github.PySimpleGUI.com')
+            command = sg.user_settings_get_entry(KEY_DOUBLE_CLICK_COMMAND, '')
+            if command:
+                try:
+                    sg.execute_command_subprocess(command)
+                except:
+                    print('Error running double-click')
         elif event == 'Settings':
             display_message('Opening settings')
             show_settings_window(window.current_location(use_anchor=G.icon_popup_anchor))
+            window['-IMAGE-'].mouseover_image_set(image_source=G.mouseover_icon)           # in case the mouseover image changed
         elif event in ('Keep on top is OFF', 'Keep on top is ON'):          # Keep on top right click menu
             window.keep_on_top_set() if event.endswith('OFF') else window.keep_on_top_clear()
             RIGHT_CLICK_MENU[1][1] = f'Keep on top is {"ON" if event.endswith("OFF") else "OFF"}'
             window['-IMAGE-'].set_right_click_menu(RIGHT_CLICK_MENU)
             sg.user_settings_set_entry('-keep on top-', event.endswith("OFF"))
         elif event == 'Version':
-            sg.popup_scrolled(sg.get_versions(), f'This Program: {__file__}', f'psgdnd version: {dnd.version}', keep_on_top=True, non_blocking=True, button_justification='right')
+            sg.popup_scrolled( f'This Program: {__file__} version {version}', sg.get_versions(), f'psgdnd version: {dnd.version}',  keep_on_top=True, non_blocking=True, button_justification='right', size=(102, 12))
         elif event == 'Edit Me':
             sg.execute_editor(__file__)
 
     window.close()
 
 if __name__ == '__main__':
-    if Version(sg.version) < Version("6.2.8"):
-        if sg.popup_yes_no(f'ERROR - PySimpleGUI version is {sg.version}', 'PySimpleGUI version 6.2.8 or greater is required to run this program.', 'To pip install it, execute the command:', r'python -m pip install --upgrade https://github.com/PySimpleGUI/PySimpleGUI/zipball/master', 'Would you like to upgrade to latest from GitHub?', line_width=100) == 'Yes':
+    required_psg_version = '6.2.14'
+    if Version(sg.version) < Version(required_psg_version):
+        if sg.popup_yes_no(f'ERROR - PySimpleGUI version is {sg.version}', f'PySimpleGUI version {required_psg_version} or greater is required to run this program.', 'To pip install it, execute the command:', r'python -m pip install --upgrade https://github.com/PySimpleGUI/PySimpleGUI/zipball/master', 'Would you like to upgrade to latest from GitHub?', line_width=100) == 'Yes':
             sg.execute_pip_install_package(r'https://github.com/PySimpleGUI/PySimpleGUI/zipball/master')
             sg.popup_auto_close('Please restart the application to use the newly installed PySimpleGUI package.', auto_close_duration=3)
             exit()
