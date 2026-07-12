@@ -62,7 +62,7 @@ except:
 """
 
 
-version = '6.2.5'
+version = '6.2.6'
 __version__ = version.split()[0]
 
 """
@@ -86,6 +86,9 @@ Changelog since last major release
 6.2.5    5-Jul-2026     Added double-click action to take to settings 
                         Added tinifying PNG files.  Used when converting to a PNG file or encoding the base64 PNG. User needs a (free) API key
                         Added base64 mouseover image to the settings.  Mouseover will easily show the desktop icon isn't really an icon but an application.
+6.2.6   12-Jul-2026     Added to text drop window the ability to decode and view a base64 encoded png image
+
+
 """
 
 
@@ -145,11 +148,11 @@ def show_settings_window(location:Tuple[int, int], location_anchor=None):
     layout = [[sg.T('Drag and Drop Icon Settings', font='_ 15')],
               [sg.Input(setting=0, justification='r', s=3, k=KEY_JPG_QUALITY), sg.T('%  Default JPG quality', p=(None, (0,2)))],
               [sg.Input(setting=10, justification='r', s=3, k=KEY_ALPHA), sg.T('Alpha channel for icon (1-10)')],
-              [sg.Input(setting='', justification='r', s=40, k=KEY_PNG_ICON_FILENAME), sg.T('Icon filename')],
-              [sg.Input(setting='', justification='r', s=40, k=KEY_PNG_ICON_BASE64), sg.T('Icon Base64')],
-              [sg.Input(setting='', justification='r', s=40, k=KEY_PNG_MOUSEOVER_ICON_BASE64), sg.T('Mouseover Icon Base64')],
-              [sg.Input(setting='', justification='r', s=40, k=KEY_DOUBLE_CLICK_COMMAND), sg.T('Double-Click action')],
-              [sg.Input(setting='', justification='r', s=40, k=KEY_TINIFY_API_KEY), sg.T('Tinify API key')],
+              [sg.Input(setting='', placeholder='Icon filename', placeholder_text_color='blue', placeholder_justification='c', justification='l', s=40, k=KEY_PNG_ICON_FILENAME) ],
+              [sg.Input(setting='', justification='l', s=40, placeholder='Base64 PNG to use as icon',placeholder_text_color='blue', placeholder_justification='c',k=KEY_PNG_ICON_BASE64),],
+              [sg.Input(setting='', justification='l', s=40, placeholder='Mouseover icon', placeholder_text_color='blue',k=KEY_PNG_MOUSEOVER_ICON_BASE64), ],
+              [sg.Input(setting='', justification='l', s=40, placeholder='Double-click action to take', placeholder_text_color='blue',k=KEY_DOUBLE_CLICK_COMMAND),],
+              [sg.Input(setting='', justification='l',  s=40, k=KEY_TINIFY_API_KEY, placeholder='Paste Tinify API key here...', placeholder_justification='c', placeholder_text_color='blue',), ],
               [sg.Frame('Popup Anchoring',
                         [[sg.T('Location on Icon to anchor popups'), sg.Combo(values=list(anchor_choices.keys()), k=KEY_ICON_ANCHOR, setting=DEFAULT_ICON_POPUP_ANCHOR, size=(10,5), readonly=True)],
                             [sg.T('Location on popup Window to anchor to icon'), sg.Combo(values=list(anchor_choices.keys()), k=KEY_WINDOW_ANCHOR, setting=DEFAULT_POPUP_ANCHOR, size=(10,5), readonly=True)]])],
@@ -330,6 +333,23 @@ def get_image_size_and_dimensions(filename, as_text=True):
     return size_kb, width, height
 
 
+def decode_base64(s):
+    """
+    Decodes and displays a base64 encoded PNG.  Displays the pixel dimensions and thge image
+    :param s:           The base64 encoded string
+    :type               str
+    """
+    s = s.strip()
+    if s.startswith('b\''):
+        s = s[2:-1]
+    elif any(x in s for x in (' = ', "=b'")):
+        s = s[s.index("b'") + 2:-1]
+    bstring = bytes(s, encoding='utf8')
+    image = sg.tk.PhotoImage(data=s)         # used only to get image size
+    sg.Window('', [[sg.Image(data=bstring), sg.T(f'{image.width()} x {image.height()}'),sg.Button('Ok')]], finalize=True).read(close=True)
+
+
+
 #   ██████╗  ██████╗ ██████╗ ██╗   ██╗██████╗
 #   ██╔══██╗██╔═══██╗██╔══██╗██║   ██║██╔══██╗
 #   ██████╔╝██║   ██║██████╔╝██║   ██║██████╔╝
@@ -433,7 +453,7 @@ def text_popup(text:str, location, location_anchor=None):
     :param location_anchor: What part of the window should be anchored at the location
     :type location_anchor:  str
     """
-    actions = ('Translate to English', 'Translate to Spanish',  'Cancel')
+    actions = ('Translate to English', 'Translate to Spanish',  'Decode BASE64 PNG', 'Cancel')
     lang_to_dest = {'Spanish' : 'es', 'English' : 'en'}
     button_size = max(len(a) for a in actions)
     layout = [[sg.Text('Text dropped - What do you want to do with it?')],
@@ -451,7 +471,8 @@ def text_popup(text:str, location, location_anchor=None):
             translation = translator.translate(text, dest=lang_to_dest[lang])
             display_message(f'Translated to {lang}')
             sg.clipboard_set(translation.text)
-
+    elif event == 'Decode BASE64 PNG':
+        decode_base64(text)
         # sg.popup(f'Dropped files:', '\n'.join(file_list), non_blocking=True, line_width=max(len(f)+1 for f in file_list), location=location, no_titlebar=True)
 
 
