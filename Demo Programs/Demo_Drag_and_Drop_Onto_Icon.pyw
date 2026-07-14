@@ -2,7 +2,7 @@ import base64
 import io
 import os
 from typing import Tuple, Union, List, Any, Dict
-
+import ast
 
 try:
     import tinify
@@ -62,7 +62,7 @@ except:
 """
 
 
-version = '6.2.6'
+version = '6.2.7'
 __version__ = version.split()[0]
 
 """
@@ -87,7 +87,7 @@ Changelog since last major release
                         Added tinifying PNG files.  Used when converting to a PNG file or encoding the base64 PNG. User needs a (free) API key
                         Added base64 mouseover image to the settings.  Mouseover will easily show the desktop icon isn't really an icon but an application.
 6.2.6   12-Jul-2026     Added to text drop window the ability to decode and view a base64 encoded png image
-
+6.2.7   13-Jul-2026     Fixed storing and using bytestrings.  Didn't know to use ast.literal_eval to convert from string to bytestring
 
 """
 
@@ -124,7 +124,7 @@ class G:
     popup_anchor: str = anchor_choices[sg.user_settings_get_entry('-WINDOW ANCHOR-', DEFAULT_POPUP_ANCHOR)]
     tinify_api_key: str = None
     mouseover_icon:bytes = None
-
+    icon = None                         # Icon currently being used
 
 #   ███████╗███████╗████████╗████████╗██╗███╗   ██╗ ██████╗ ███████╗
 #   ██╔════╝██╔════╝╚══██╔══╝╚══██╔══╝██║████╗  ██║██╔════╝ ██╔════╝
@@ -148,10 +148,10 @@ def show_settings_window(location:Tuple[int, int], location_anchor=None):
     layout = [[sg.T('Drag and Drop Icon Settings', font='_ 15')],
               [sg.Input(setting=0, justification='r', s=3, k=KEY_JPG_QUALITY), sg.T('%  Default JPG quality', p=(None, (0,2)))],
               [sg.Input(setting=10, justification='r', s=3, k=KEY_ALPHA), sg.T('Alpha channel for icon (1-10)')],
-              [sg.Input(setting='', placeholder='Icon filename', placeholder_text_color='blue', placeholder_justification='c', justification='l', s=40, k=KEY_PNG_ICON_FILENAME) ],
+              [sg.Input(setting='', placeholder='Icon image filename', placeholder_text_color='blue', placeholder_justification='c', justification='l', s=40, k=KEY_PNG_ICON_FILENAME) ],
               [sg.Input(setting='', justification='l', s=40, placeholder='Base64 PNG to use as icon',placeholder_text_color='blue', placeholder_justification='c',k=KEY_PNG_ICON_BASE64),],
-              [sg.Input(setting='', justification='l', s=40, placeholder='Mouseover icon', placeholder_text_color='blue',k=KEY_PNG_MOUSEOVER_ICON_BASE64), ],
-              [sg.Input(setting='', justification='l', s=40, placeholder='Double-click action to take', placeholder_text_color='blue',k=KEY_DOUBLE_CLICK_COMMAND),],
+              [sg.Input(setting='', justification='l', s=40, placeholder='Base64 PNG to use as mouseover', placeholder_justification='c',placeholder_text_color='blue',k=KEY_PNG_MOUSEOVER_ICON_BASE64), ],
+              [sg.Input(setting='', justification='l', s=40, placeholder='Double-click action to take',placeholder_justification='c', placeholder_text_color='blue',k=KEY_DOUBLE_CLICK_COMMAND),],
               [sg.Input(setting='', justification='l',  s=40, k=KEY_TINIFY_API_KEY, placeholder='Paste Tinify API key here...', placeholder_justification='c', placeholder_text_color='blue',), ],
               [sg.Frame('Popup Anchoring',
                         [[sg.T('Location on Icon to anchor popups'), sg.Combo(values=list(anchor_choices.keys()), k=KEY_ICON_ANCHOR, setting=DEFAULT_ICON_POPUP_ANCHOR, size=(10,5), readonly=True)],
@@ -171,22 +171,23 @@ def show_settings_window(location:Tuple[int, int], location_anchor=None):
         if event in (sg.WIN_CLOSED, 'Cancel', 'Exit'):
             break
         elif event == 'OK':
-            if values[KEY_PNG_ICON_BASE64].startswith(("b'", 'b"')):        # if the bytestring included quotes, strip off the quotes
-                values[KEY_PNG_ICON_BASE64] = values[KEY_PNG_ICON_BASE64][2:-1]    # remove 2 chars from the front, 1 from the end
-            if values[KEY_PNG_MOUSEOVER_ICON_BASE64].startswith(("b'", 'b"')):        # if the bytestring included quotes, strip off the quotes
-                values[KEY_PNG_MOUSEOVER_ICON_BASE64] = values[KEY_PNG_MOUSEOVER_ICON_BASE64][2:-1]    # remove 2 chars from the front, 1 from the end
-
             if values[KEY_PNG_MOUSEOVER_ICON_BASE64]:
-                G.mouseover_icon = bytes(values[KEY_PNG_MOUSEOVER_ICON_BASE64], 'utf-8')
+                G.mouseover_icon = ast.literal_eval(values[KEY_PNG_MOUSEOVER_ICON_BASE64])
             else:
                 G.mouseover_icon = None
+            # saved_pngicon = sg.user_settings_get_entry(KEY_PNG_ICON_BASE64, None)
+            # saved_icon_filename = sg.user_settings_get_entry(KEY_PNG_ICON_FILENAME, None)
             window.settings_save(values)
             G.icon_popup_anchor = anchor_choices[values.get(KEY_ICON_ANCHOR, DEFAULT_ICON_POPUP_ANCHOR)]
             G.popup_anchor = anchor_choices[values.get(KEY_WINDOW_ANCHOR, DEFAULT_POPUP_ANCHOR)]
             G.tinify_api_key = values[KEY_TINIFY_API_KEY]
-
             if tinify_available:
                 tinify.key =  G.tinify_api_key
+            icon_b64 = ast.literal_eval(values[KEY_PNG_ICON_BASE64]) if values[KEY_PNG_ICON_BASE64] else None
+            icon_filename = values[KEY_PNG_ICON_FILENAME]
+            if G.icon not in (icon_b64, icon_filename):
+                G.icon = icon_b64 or icon_filename
+                print(f'Set icon to {G.icon=}')
             break
     window.close()
 
@@ -333,20 +334,16 @@ def get_image_size_and_dimensions(filename, as_text=True):
     return size_kb, width, height
 
 
+
 def decode_base64(s):
     """
     Decodes and displays a base64 encoded PNG.  Displays the pixel dimensions and thge image
     :param s:           The base64 encoded string
     :type               str
     """
-    s = s.strip()
-    if s.startswith('b\''):
-        s = s[2:-1]
-    elif any(x in s for x in (' = ', "=b'")):
-        s = s[s.index("b'") + 2:-1]
-    bstring = bytes(s, encoding='utf8')
-    image = sg.tk.PhotoImage(data=s)         # used only to get image size
-    sg.Window('', [[sg.Image(data=bstring), sg.T(f'{image.width()} x {image.height()}'),sg.Button('Ok')]], finalize=True).read(close=True)
+    image_bytes = ast.literal_eval(s)
+    image = sg.tk.PhotoImage(data=image_bytes)         # used only to get image size
+    sg.Window('', [[sg.Image(data=image_bytes), sg.T(f'{image.width()} x {image.height()}'),sg.Button('Ok')]], finalize=True).read(close=True)
 
 
 
@@ -565,14 +562,15 @@ def main():
         alpha = 1
     # set the icon to use
     if b64icon:
-        icon = bytes(b64icon, 'utf-8')
+        G.icon = ast.literal_eval(b64icon)
     elif pngicon:
-        icon = pngicon
+        G.icon = pngicon
     else:
-        icon = sg.EMOJI_BASE64_COOL
+        G.icon = sg.EMOJI_BASE64_COOL
 
     if mouseover_icon:
-        G.mouseover_icon = bytes(mouseover_icon, 'utf-8')
+        G.mouseover_icon = ast.literal_eval(mouseover_icon)
+
 
     if tinify_available:
         G.tinify_api_key = sg.user_settings_get_entry(KEY_TINIFY_API_KEY, None)
@@ -584,16 +582,16 @@ def main():
 
 
     RIGHT_CLICK_MENU = ['', ['Settings', f'Keep on top is {"ON" if keep_on_top else "OFF"}', 'Edit Me', 'Version', 'Exit']]
-    # layout = [[sg.Button(image_source=icon, key='-IMAGE-', p=0, button_color='black', border_width=0, mouseover_image_source=G.mouseover_icon)]]
-    layout = [[sg.Image(source=icon, key='-IMAGE-', p=0, background_color='black', enable_events=True, mouseover_image_source=G.mouseover_icon)]]
+    # layout = [[sg.Button(image_source=icon, key='-ICON-', p=0, button_color='black', border_width=0, mouseover_image_source=G.mouseover_icon)]]
+    layout = [[sg.Image(source=G.icon, key='-ICON-', p=0, background_color='black', enable_events=True, mouseover_image_source=G.mouseover_icon)]]
 
-    window = sg.Window('Desktop Icon Demo', layout, element_justification='center', resizable=True, no_titlebar=True, right_click_menu=RIGHT_CLICK_MENU, margins=(0,0), grab_anywhere=True, auto_save_location=True, keep_on_top=keep_on_top,  finalize=True, alpha_channel=alpha)
+    window = sg.Window('Desktop Icon Demo', layout, element_justification='center', resizable=True, no_titlebar=True, right_click_menu=RIGHT_CLICK_MENU, margins=(0,0), grab_anywhere=True, auto_save_location=True, keep_on_top=keep_on_top,  finalize=True, alpha_channel=alpha, transparent_color='black')
 
     display_message.window = window           # important.... need to set this function attribute for the display message function to work... sorry, it's a hack
 
-    dnd.register_element_dnd(window['-IMAGE-'], window, dnd.DROP_TYPE_ALL)        # The one line of code needed to add drag and drop
+    dnd.register_element_dnd(window['-ICON-'], window, dnd.DROP_TYPE_ALL)        # The one line of code needed to add drag and drop
 
-    window['-IMAGE-'].bind('<Double-Button-1>', '+DOUBLE_CLICK+')
+    window['-ICON-'].bind('<Double-Button-1>', '+DOUBLE_CLICK+')
 
     #------------ The Event Loop ------------#
     while True:
@@ -608,21 +606,26 @@ def main():
                 image_popup(values[event], window.current_location(use_anchor=G.icon_popup_anchor))
             elif dnd_event.drop_type == dnd.DROP_TYPE_TEXT:      # If files are dropped, show a window with choices of what to do with them
                 text_popup(values[event], window.current_location(use_anchor=G.icon_popup_anchor))
-        if event == '-IMAGE-+DOUBLE_CLICK+':                    # Add your double-click action here... such as launching another program
+        if event == '-ICON-+DOUBLE_CLICK+':                    # Add your double-click action here... such as launching another program
             command = sg.user_settings_get_entry(KEY_DOUBLE_CLICK_COMMAND, '')
             if command:
                 try:
                     sg.execute_command_subprocess(command)
                 except:
                     print('Error running double-click')
-        elif event == 'Settings':
+            else:
+                event = 'Settings'                    # Fake a settings event
+        if event == 'Settings':
             display_message('Opening settings')
             show_settings_window(window.current_location(use_anchor=G.icon_popup_anchor))
-            window['-IMAGE-'].mouseover_image_set(image_source=G.mouseover_icon)           # in case the mouseover image changed
+            window['-ICON-'].mouseover_image_set(image_source=G.mouseover_icon)           # in case the mouseover image changed
+            if not G.icon:
+                G.icon = sg.EMOJI_BASE64_COOL
+            window['-ICON-'].update(source=G.icon)
         elif event in ('Keep on top is OFF', 'Keep on top is ON'):          # Keep on top right click menu
             window.keep_on_top_set() if event.endswith('OFF') else window.keep_on_top_clear()
             RIGHT_CLICK_MENU[1][1] = f'Keep on top is {"ON" if event.endswith("OFF") else "OFF"}'
-            window['-IMAGE-'].set_right_click_menu(RIGHT_CLICK_MENU)
+            window['-ICON-'].set_right_click_menu(RIGHT_CLICK_MENU)
             sg.user_settings_set_entry('-keep on top-', event.endswith("OFF"))
         elif event == 'Version':
             sg.popup_scrolled( f'This Program: {__file__} version {version}', sg.get_versions(), f'psgdnd version: {dnd.version}',  keep_on_top=True, non_blocking=True, button_justification='right', size=(102, 12))
