@@ -11,7 +11,7 @@ def readme():
 
 setuptools.setup(
 name="psgdnd",
-version="6.0.4",
+version="6.0.5",
 author="PySimpleGUI",
 install_requires=["PySimpleGUI","tkinterdnd2"],
 description="Drag and Drop expansion for PySimpleGUI",

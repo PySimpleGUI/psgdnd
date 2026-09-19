@@ -14,19 +14,18 @@ except:
 
 from PIL import Image
 import PySimpleGUI as sg
-import psgdnd as dnd
+import psgdnd
 from pathlib import Path
 from packaging.version import Version
 
 try:
-    from googletrans import Translator
+    from deep_translator import MyMemoryTranslator
     translate_installed = True
 except:
     print('*** WARNING - unable to import from the googletrans package. You will not be able to access Translation features. ***')
     translate_installed = False
 
 """
-    
     Creates what appears to be an icon on your desktop, but is in reality a PySimpleGUI program.
     
     NOTE - You need to use  PySimpleGUI version 6.2 with this program.  6.2 has the ability to set any color of border for Frame elements
@@ -158,7 +157,7 @@ def show_settings_window(location:Tuple[int, int], location_anchor=None):
                             [sg.T('Location on popup Window to anchor to icon'), sg.Combo(values=list(anchor_choices.keys()), k=KEY_WINDOW_ANCHOR, setting=DEFAULT_POPUP_ANCHOR, size=(10,5), readonly=True)]])],
               [sg.T('Versions',font=('default', 14, 'bold'), p=0)],
               [sg.T(f'{version:6} this program', p=0)],
-              [sg.T(f'{dnd.version:6} psgdnd', p=0)],
+              [sg.T(f'{psgdnd.version:6} psgdnd', p=0)],
               [sg.T(f'{sg.version:6} PySimpleGUI', p=0)],
               [sg.Push(), sg.OK(), sg.Cancel()]]
 
@@ -439,6 +438,7 @@ def image_popup(filenames:str, location, location_anchor=None):
 
         # sg.popup(f'Dropped files:', '\n'.join(file_list), non_blocking=True, line_width=max(len(f)+1 for f in file_list), location=location, no_titlebar=True)
 
+
 def text_popup(text:str, location, location_anchor=None):
     """
     Displays a popup window with options for dropped text.  Performs chosen operation.
@@ -450,6 +450,7 @@ def text_popup(text:str, location, location_anchor=None):
     :param location_anchor: What part of the window should be anchored at the location
     :type location_anchor:  str
     """
+
     actions = ('Translate to English', 'Translate to Spanish',  'Decode BASE64 PNG', 'Cancel')
     lang_to_dest = {'Spanish' : 'es', 'English' : 'en'}
     button_size = max(len(a) for a in actions)
@@ -460,14 +461,14 @@ def text_popup(text:str, location, location_anchor=None):
     event, values = convert_window.read(close=True)
     # Perform actions
     if event.startswith('Translate'):
-        lang = event.split()[-1]                # The image format is always at the end of the button string
         # Translate the text; dest='es' specifies Spanish as the destination language
+        lang = event.split()[-1]                # 'English' or 'Spanish' is always at the end of the button string
         if translate_installed:
-            translator = Translator()
-
-            translation = translator.translate(text, dest=lang_to_dest[lang])
+            src, dest = ('es-ES', 'en-US') if lang == 'English' else ('en-US', 'es-ES')
+            translated = MyMemoryTranslator(source=src, target=dest).translate(text)
             display_message(f'Translated to {lang}')
-            sg.clipboard_set(translation.text)
+            sg.clipboard_set(translated)
+            sg.popup_scrolled(f'Translated to {lang}', translated)
     elif event == 'Decode BASE64 PNG':
         decode_base64(text)
         # sg.popup(f'Dropped files:', '\n'.join(file_list), non_blocking=True, line_width=max(len(f)+1 for f in file_list), location=location, no_titlebar=True)
@@ -579,9 +580,9 @@ def main():
 
 
     #------- GUI definition & setup --------#
+    DND_RULES = {'-ICON-': psgdnd.Rule(files=psgdnd.EVENT_ONLY, multiple=True)}
 
-
-    RIGHT_CLICK_MENU = ['', ['Settings', f'Keep on top is {"ON" if keep_on_top else "OFF"}', 'Edit Me', 'Version', 'Exit']]
+    RIGHT_CLICK_MENU = ['', ['Settings', f'Keep on top is {"ON" if keep_on_top else "OFF"}', '---', 'Edit Me', 'Version', '---', 'Exit']]
     # layout = [[sg.Button(image_source=icon, key='-ICON-', p=0, button_color='black', border_width=0, mouseover_image_source=G.mouseover_icon)]]
     layout = [[sg.Image(source=G.icon, key='-ICON-', p=0, background_color='black', enable_events=True, mouseover_image_source=G.mouseover_icon)]]
 
@@ -589,7 +590,8 @@ def main():
 
     display_message.window = window           # important.... need to set this function attribute for the display message function to work... sorry, it's a hack
 
-    dnd.register_element_dnd(window['-ICON-'], window, dnd.DROP_TYPE_ALL)        # The one line of code needed to add drag and drop
+    count = psgdnd.enable(window, rules=DND_RULES)              # <-- the whole drag & drop integration
+    # psgdnd.register_element_dnd(window['-ICON-'], window, psgdnd.DROP_TYPE_ALL)        # The one line of code needed to add drag and drop
 
     window['-ICON-'].bind('<Double-Button-1>', '+DOUBLE_CLICK+')
 
@@ -600,11 +602,11 @@ def main():
         if event in (sg.WIN_CLOSED, 'Exit'):
             break
 
-        if dnd.is_drop_event(event):                            # Drag and Drop event
-            dnd_event: dnd.DropEvent = event
-            if dnd_event.drop_type == dnd.DROP_TYPE_FILES:      # If files are dropped, show a window with choices of what to do with them
+        if psgdnd.is_drop_event(event):                            # Drag and Drop event
+            dnd_event: psgdnd.DropEvent = event
+            if dnd_event.drop_type == psgdnd.DROP_TYPE_FILES:      # If files are dropped, show a window with choices of what to do with them
                 image_popup(values[event], window.current_location(use_anchor=G.icon_popup_anchor))
-            elif dnd_event.drop_type == dnd.DROP_TYPE_TEXT:      # If files are dropped, show a window with choices of what to do with them
+            elif dnd_event.drop_type == psgdnd.DROP_TYPE_TEXT:      # If files are dropped, show a window with choices of what to do with them
                 text_popup(values[event], window.current_location(use_anchor=G.icon_popup_anchor))
         if event == '-ICON-+DOUBLE_CLICK+':                    # Add your double-click action here... such as launching another program
             command = sg.user_settings_get_entry(KEY_DOUBLE_CLICK_COMMAND, '')
@@ -628,7 +630,7 @@ def main():
             window['-ICON-'].set_right_click_menu(RIGHT_CLICK_MENU)
             sg.user_settings_set_entry('-keep on top-', event.endswith("OFF"))
         elif event == 'Version':
-            sg.popup_scrolled( f'This Program: {__file__} version {version}', sg.get_versions(), f'psgdnd version: {dnd.version}',  keep_on_top=True, non_blocking=True, button_justification='right', size=(102, 12))
+            sg.popup_scrolled( f'This Program: {__file__} version {version}', sg.get_versions(), f'psgdnd version: {psgdnd.version}',  keep_on_top=True, non_blocking=True, button_justification='right', size=(102, 12))
         elif event == 'Edit Me':
             sg.execute_editor(__file__)
 
