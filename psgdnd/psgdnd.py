@@ -5,7 +5,7 @@ import os
 
 
 
-version = '6.0.5'
+version = '6.0.6'
 __version__ = version.split()[0]
 
 """
@@ -21,7 +21,9 @@ Changelog
                         Multiline, items into Listbox, picture into Image, Browse buttons forward to their target) and the usual
                         DropEvent is still sent. Hover tint + accept/refuse cursor, ext/folder/multiple filtering, window-background
                         target, DropEvent.files/.text/.file/.applied, target()/untarget(), main() demo so "python -m psgdnd" works.
+6.0.6       20-Sep-2026 Changed the color of multiline element.  Changed the text colors printed in Multiline to be more readable                        
 """
+
 
 
 
@@ -578,17 +580,18 @@ def main():
                [sg.Text('Image (picture files)', **lbl), sg.Image(key=K_IMAGE, size=(200, 120), background_color='#2b2b2b'),
                 sg.Text('Graph (event only)'), sg.Graph((200, 120), (0, 0), (200, 120), key=K_GRAPH, background_color='#1f3b52')]]
     log = [[sg.Text('Event log - every drop is a DropEvent object; values[event] is the text or the comma-joined paths', font='_ 10 bold')],
-           [sg.Multiline(key=K_LOG, size=(80, 30), font='Courier 9', autoscroll=True, write_only=True, disabled=True)]]
+           [sg.Multiline(key=K_LOG, size=(80, 30), font='Courier 9', autoscroll=True, write_only=True, disabled=True, background_color='black', text_color='lime', expand_y=True, expand_x=True)],]
     layout = [[sg.Column(targets, vertical_alignment='top'), sg.VSeparator(), sg.Column(log)]]
     window = sg.Window(f'psgdnd {version} demo - drag files, folders and text onto the elements', layout, finalize=True)
     rules = {K_PATH: Rule(ext=('.txt', '.md', '.py')), K_FILES: Rule(multiple=True), K_EDITOR: Rule(files=CONTENTS, text=INSERT)}
-    window[K_LOG].print(f'{enable(window, rules=rules, skip=[K_SEARCH])} drop targets registered', text_color='#7CD992')
+    window[K_LOG].print(f'{enable(window, rules=rules, skip=[K_SEARCH])} drop targets registered', text_color='white')
     while True:
         event, values = window.read()
         if event == sg.WIN_CLOSED:
             break
         elif is_drop_event(event):
-            window[K_LOG].print(f'{event}\n   values[event] = {values[event]!r}', text_color='#8FD3FF')
+            window[K_LOG].print(f'{event}', text_color='orange')
+            window[K_LOG].print(f'   values[event] = {values[event]!r}')
             if event.key == K_GRAPH:
                 window[K_GRAPH].erase()
                 for i, f in enumerate(event.files[:5]):
