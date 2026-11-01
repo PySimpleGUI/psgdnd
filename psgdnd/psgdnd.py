@@ -5,7 +5,7 @@ import os
 
 
 
-version = '6.0.6'
+version = '6.1'
 __version__ = version.split()[0]
 
 """
@@ -21,7 +21,8 @@ Changelog
                         Multiline, items into Listbox, picture into Image, Browse buttons forward to their target) and the usual
                         DropEvent is still sent. Hover tint + accept/refuse cursor, ext/folder/multiple filtering, window-background
                         target, DropEvent.files/.text/.file/.applied, target()/untarget(), main() demo so "python -m psgdnd" works.
-6.0.6       20-Sep-2026 Changed the color of multiline element.  Changed the text colors printed in Multiline to be more readable                        
+6.0.6       20-Sep-2026 Changed the color of multiline element.  Changed the text colors printed in Multiline to be more readable
+6.1         01-Nov-2026 Bumped version number for release to PyPI                        
 """
 
 

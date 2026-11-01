@@ -33,7 +33,7 @@ Latest code straight from this repo (not yet on PyPI):
 python -m pip install --upgrade https://github.com/PySimpleGUI/psgdnd/zipball/main
 ```
 
-![psgdnd demo window](images/psgdnd_demo.png)
+![psgdnd demo window](https://raw.githubusercontent.com/PySimpleGUI/psgdnd/main/images/psgdnd_demo.png)
 
 ---
 
@@ -68,7 +68,7 @@ turns to a no-entry sign if it won't.
 
 ## What happens when something is dropped
 
-![How a drop travels through psgdnd](images/psgdnd_flow.png)
+![How a drop travels through psgdnd](https://raw.githubusercontent.com/PySimpleGUI/psgdnd/main/images/psgdnd_flow.png)
 
 1. **tkinterdnd2** receives the native drag and psgdnd wires it into your window.
 2. **Hover** — the element's `Rule` is checked (enabled? files or text? extension? folder? how many?). Accept → tint + "+" cursor. Refuse → no-entry cursor.
@@ -82,7 +82,7 @@ Most elements need nothing in the event loop — step 4 already did what the use
 
 ## What each element does by default
 
-![Default rule per element type](images/psgdnd_defaults.png)
+![Default rule per element type](https://raw.githubusercontent.com/PySimpleGUI/psgdnd/main/images/psgdnd_defaults.png)
 
 Elements with `enable_events=True` also get their own `(key, value)` event after the drop, so existing code keeps working.
 
