@@ -27,7 +27,7 @@ python -m pip install --upgrade psgdnd        # from PyPI (installs tkinterdnd2 
 python -m psgdnd                              # opens the demo window — drag anything onto it
 ```
 
-Latest code straight from this repo (not yet on PyPI):
+Latest code straight from this repo:
 
 ```
 python -m pip install --upgrade https://github.com/PySimpleGUI/psgdnd/zipball/main
@@ -160,7 +160,6 @@ Don't register the same element both ways.
 |---|---|
 | `python -m psgdnd` | every default behaviour plus a few Rule overrides, with an event log |
 | `Demo Programs/psgdnd_demo.py` | the same window as an ordinary standalone program — start here when adding psgdnd to your own code |
-| `Demo Programs/Demo_Drag_and_Drop_Onto_Icon.pyw` | a desktop icon you drop files onto: image format conversion, English ↔ Spanish translation |
 
 ---
 
